@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-espresso text-cream;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-bold;
+  }
+
+  h1 {
+    @apply text-4xl tracking-tight;
+  }
+
+  h2 {
+    @apply text-3xl;
+  }
+
+  h3 {
+    @apply text-2xl;
+  }
+
+  p {
+    @apply text-lg leading-relaxed;
+  }
+
+  a {
+    @apply text-honey hover:text-amber transition-colors;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply px-6 py-3 bg-honey text-espresso font-semibold rounded-lg hover:bg-amber transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 border-2 border-honey text-honey font-semibold rounded-lg hover:bg-honey hover:text-espresso transition-colors;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-cream hover:bg-surface rounded transition-colors;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-surface border border-amber/20 rounded-xl p-6 hover:border-honey/50 transition-all;
+  }
+
+  .card-hex {
+    @apply relative;
+  }
+
+  /* Status badges */
+  .badge-healthy {
+    @apply inline-block px-3 py-1 bg-sage/20 text-sage rounded-full text-sm font-semibold;
+  }
+
+  .badge-watch {
+    @apply inline-block px-3 py-1 bg-honey/20 text-honey rounded-full text-sm font-semibold;
+  }
+
+  .badge-risk {
+    @apply inline-block px-3 py-1 bg-brick/20 text-brick rounded-full text-sm font-semibold;
+  }
+
+  .badge-verified {
+    @apply inline-block px-3 py-1 bg-sage/30 text-sage rounded-full text-sm font-semibold border border-sage/50;
+  }
+
+  .badge-tampered {
+    @apply inline-block px-3 py-1 bg-brick/30 text-brick rounded-full text-sm font-semibold border border-brick/50;
+  }
+
+  /* Input fields */
+  .input-field {
+    @apply w-full px-4 py-3 bg-espresso border-2 border-surface text-cream rounded-lg focus:border-honey focus:outline-none transition-colors;
+  }
+
+  .input-field::placeholder {
+    @apply text-cream/50;
+  }
+
+  /* Hexagon utilities */
+  .hex-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1rem;
+  }
+
+  /* Ledger timeline */
+  .ledger-block {
+    @apply relative pl-12 pb-8;
+  }
+
+  .ledger-block::before {
+    content: '';
+    @apply absolute left-0 top-0 w-4 h-4 rounded-full bg-honey border-4 border-espresso;
+  }
+
+  .ledger-block::after {
+    content: '';
+    @apply absolute left-1.5 top-4 w-1 h-16 bg-gradient-to-b from-honey/60 to-honey/10;
+  }
+
+  .ledger-block:last-child::after {
+    @apply hidden;
+  }
+
+  /* Hero section */
+  .hero-section {
+    @apply min-h-screen flex items-center justify-center bg-gradient-to-b from-espresso via-surface to-espresso;
+  }
+
+  /* Section divider with honeycomb */
+  .section-divider {
+    @apply my-12 h-1 bg-gradient-to-r from-transparent via-honey to-transparent;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .glow-honey {
+    box-shadow: 0 0 20px rgba(227, 165, 48, 0.3);
+  }
+
+  .transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+}
