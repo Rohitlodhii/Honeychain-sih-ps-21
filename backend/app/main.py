@@ -5,13 +5,16 @@ Main application with all routes for authentication, hives, batches, ledger, and
 
 import uuid
 import random
+import re
 from datetime import datetime
 from typing import Optional, List
 from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
-from fastapi import FastAPI, Depends, HTTPException, Header, Query
+from fastapi import FastAPI, Depends, HTTPException, Header, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -30,7 +33,7 @@ from .schemas import (
 from .auth import AuthService
 from .ledger import HoneyLedger, LedgerBlock as LedgerBlockModel
 from .analytics import ApicultureAnalytics
-from .config import frontend_url, required_secret_key, cors_origins
+from .config import frontend_url, required_secret_key, cors_origins, development_only_features_enabled
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -45,6 +48,12 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+@app.get("/health")
+def health_check():
+    """Unauthenticated process health probe for Docker and hosting platforms."""
+    return {"status": "ok"}
 
 def persisted_ledger(db: Session) -> HoneyLedger:
     """Reconstruct the ledger from durable DB rows for every write/check.
@@ -66,6 +75,21 @@ def persisted_ledger(db: Session) -> HoneyLedger:
         }
         for row in rows
     ]})
+
+
+def save_sensor_reading(db: Session, hive: Hive, temperature_c: float, humidity_pct: float,
+                        weight_kg: float, sound_hz: Optional[float] = None,
+                        recorded_at: Optional[datetime] = None) -> SensorReading:
+    """Single write path shared by authenticated API and Twilio webhook intake."""
+    reading = SensorReading(
+        id=str(uuid.uuid4()), hive_id=hive.id, temperature_c=temperature_c,
+        humidity_pct=humidity_pct, weight_kg=weight_kg, sound_hz=sound_hz,
+        recorded_at=recorded_at or datetime.utcnow(),
+    )
+    db.add(reading)
+    db.commit()
+    db.refresh(reading)
+    return reading
 
 
 # ============================================================================
@@ -248,6 +272,23 @@ def get_hive_health(
     }
 
 
+@app.post("/api/hives/{hive_id}/readings", response_model=SensorReadingResponse)
+def create_hive_reading(
+    hive_id: str,
+    request: SensorReadingCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Persist a manually measured reading; values are never generated here."""
+    hive = db.query(Hive).filter(Hive.id == hive_id, Hive.beekeeper_id == current_user.id).first()
+    if not hive:
+        raise HTTPException(status_code=404, detail="Hive not found")
+    return SensorReadingResponse.from_orm(save_sensor_reading(
+        db, hive, request.temperature_c, request.humidity_pct, request.weight_kg,
+        request.sound_hz, request.recorded_at,
+    ))
+
+
 @app.post("/api/hives/{hive_id}/simulate", response_model=SimulationResponse)
 def simulate_hive_readings(
     hive_id: str,
@@ -259,6 +300,8 @@ def simulate_hive_readings(
     Simulate 5 sensor readings for a hive.
     If anomaly=true, include one reading indicating disease/stress.
     """
+    if not development_only_features_enabled():
+        raise HTTPException(status_code=404, detail="Not found")
     hive = db.query(Hive).filter(Hive.id == hive_id, Hive.beekeeper_id == current_user.id).first()
     if not hive:
         raise HTTPException(status_code=404, detail="Hive not found")
@@ -311,6 +354,60 @@ def simulate_hive_readings(
         anomaly_detected=anomaly_detected,
         message="Simulation complete. Anomaly detected." if anomaly_detected else "Simulation complete.",
     )
+
+
+def sms_reply(message: str) -> Response:
+    safe_message = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return Response(f"<?xml version=\"1.0\"?><Response><Message>{safe_message}</Message></Response>", media_type="application/xml")
+
+
+def ingest_sms_reading(from_phone: str, body: str, db: Session) -> Response:
+    """Parse a Twilio body and reuse the normal persisted-reading write path."""
+    match = re.fullmatch(
+        r"\s*([A-Za-z0-9_-]+)\s+TEMP\s+(-?\d+(?:\.\d+)?)\s+HUM\s+(\d+(?:\.\d+)?)(?:\s+SOUND\s+(\d+(?:\.\d+)?))?\s*",
+        body,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return sms_reply("Format: HIVE1 TEMP 34 HUM 55 [SOUND 220]")
+    hive_code, temp, humidity, sound = match.groups()
+    hive = db.query(Hive).join(User).filter(
+        User.phone == from_phone, func.lower(Hive.name) == hive_code.lower()
+    ).first()
+    if not hive:
+        return sms_reply("Hive code not found for this phone number.")
+    latest = db.query(SensorReading).filter(SensorReading.hive_id == hive.id).order_by(
+        SensorReading.recorded_at.desc()
+    ).first()
+    if not latest:
+        return sms_reply("Record one reading with weight in the app before SMS intake.")
+    reading = save_sensor_reading(db, hive, float(temp), float(humidity), latest.weight_kg,
+                                  float(sound) if sound is not None else None)
+    diagnosis = ApicultureAnalytics.analyze_hive_health(
+        reading.temperature_c, reading.humidity_pct, reading.sound_hz, reading.weight_kg
+    )
+    return sms_reply(f"{hive.name}: {diagnosis.status}. {diagnosis.reasons[0]}")
+
+
+@app.post("/api/sms/webhook")
+def sms_webhook(
+    From: str = Form(...),
+    Body: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Twilio-compatible form webhook. Configure Twilio signature validation before public deployment."""
+    return ingest_sms_reading(From, Body, db)
+
+
+@app.post("/api/sms/simulate")
+def simulate_sms_webhook(
+    from_phone: str = Form(...),
+    body: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    if not development_only_features_enabled():
+        raise HTTPException(status_code=404, detail="Not found")
+    return ingest_sms_reading(from_phone, body, db)
 
 
 # ============================================================================
@@ -492,6 +589,42 @@ def get_batch_qr(
     return StreamingResponse(img_bytes, media_type="image/png")
 
 
+@app.get("/api/batches/{batch_id}/compliance-report")
+def compliance_report(
+    batch_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a PDF screening report from persisted batch and ledger data."""
+    batch = db.query(Batch).filter(Batch.id == batch_id, Batch.beekeeper_id == current_user.id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    blocks = db.query(LedgerBlock).filter(LedgerBlock.batch_id == batch_id).order_by(LedgerBlock.index).all()
+    purity = ApicultureAnalytics.score_purity(batch.moisture_pct)
+    pdf = BytesIO()
+    report = canvas.Canvas(pdf, pagesize=A4)
+    _, height = A4
+    y = height - 48
+    lines = [
+        "HoneyChain Compliance Screening Report", f"Batch ID: {batch.id}",
+        f"Honey type: {batch.honey_type}", f"Quantity: {batch.quantity_kg} kg",
+        f"Moisture: {batch.moisture_pct}% | BIS/Codex <=20%: {'COMPLIANT' if purity['moisture_compliant'] else 'NOT COMPLIANT'}",
+        f"Purity screening: {purity['status']} ({purity['purity_score']}/100)",
+        "Ledger timeline (event | hash):",
+    ]
+    for block in blocks:
+        lines.append(f"#{block.index} {block.event_type} | {block.hash}")
+    for line in lines:
+        if y < 48:
+            report.showPage(); y = height - 48
+        report.drawString(42, y, line[:115]); y -= 16
+    report.save()
+    pdf.seek(0)
+    return StreamingResponse(pdf, media_type="application/pdf", headers={
+        "Content-Disposition": f'attachment; filename="honeychain-{batch_id}-compliance.pdf"'
+    })
+
+
 # ============================================================================
 # Verify Route (Public, No Auth)
 # ============================================================================
@@ -516,6 +649,7 @@ def verify_batch(batch_id: str, db: Session = Depends(get_db)):
     # Verify ledger integrity
     chain_verification = persisted_ledger(db).verify_chain()
     authenticity_badge = "VERIFIED" if chain_verification["valid"] else "TAMPERED"
+    transfer_count = sum(1 for block in blocks if block.event_type == "TRANSFER")
 
     return VerifyBatchResponse(
         batch_id=batch.id,
@@ -531,6 +665,8 @@ def verify_batch(batch_id: str, db: Session = Depends(get_db)):
         ledger_timeline=[LedgerBlockResponse.from_orm(b) for b in blocks],
         chain_verification=chain_verification,
         authenticity_badge=authenticity_badge,
+        transfer_count=transfer_count,
+        direct_trade=transfer_count <= 1,
     )
 
 
@@ -588,6 +724,29 @@ def admin_overview(
     # Ledger integrity
     chain_verification = persisted_ledger(db).verify_chain()
 
+    # Score = 70% average purity + 3 points per batch (capped at 10 batches)
+    # minus 10 per integrity error involving a cluster batch, clamped to 0..100.
+    # It is computed live; no reputation values are stored or fabricated.
+    reputation_leaderboard = []
+    clusters = db.query(User.cluster).filter(User.cluster != None).distinct().all()
+    for (cluster,) in clusters:
+        cluster_batches = db.query(Batch).join(User).filter(User.cluster == cluster).all()
+        batch_ids = {batch.id for batch in cluster_batches}
+        cluster_blocks = db.query(LedgerBlock).filter(LedgerBlock.batch_id.in_(batch_ids)).all() if batch_ids else []
+        tamper_incidents = sum(1 for block in cluster_blocks if block.hash != LedgerBlockModel(
+            index=block.index, batch_id=block.batch_id, event_type=block.event_type,
+            payload=block.payload, actor=block.actor, timestamp=block.timestamp_str,
+            prev_hash=block.prev_hash, nonce=block.nonce, hash=block.hash,
+        ).compute_hash())
+        average_purity = sum((batch.purity_score or 0) for batch in cluster_batches) / len(cluster_batches) if cluster_batches else 0
+        score = max(0, min(100, round(average_purity * 0.7 + min(len(cluster_batches), 10) * 3 - tamper_incidents * 10, 1)))
+        reputation_leaderboard.append({
+            "cluster": cluster, "batch_count": len(cluster_batches),
+            "avg_purity": round(average_purity, 1), "tamper_incidents": tamper_incidents,
+            "score": score,
+        })
+    reputation_leaderboard.sort(key=lambda entry: entry["score"], reverse=True)
+
     return AdminOverviewResponse(
         total_beekeepers=total_beekeepers,
         total_hives=total_hives,
@@ -598,6 +757,7 @@ def admin_overview(
         avg_purity_score=round(avg_purity, 1),
         avg_hive_health_status=avg_hive_health_status,
         ledger_integrity=chain_verification,
+        reputation_leaderboard=reputation_leaderboard,
     )
 
 

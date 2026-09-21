@@ -37,6 +37,7 @@ export const batchAPI = {
   create: (data: any) => apiClient.post('/api/batches', data),
   list: () => apiClient.get('/api/batches'),
   getQR: (batchId: string) => `${API_URL}/api/batches/${batchId}/qr`,
+  complianceReport: (batchId: string) => apiClient.get(`/api/batches/${batchId}/compliance-report`, { responseType: 'blob' }),
   addEvent: (batchId: string, data: any) => apiClient.post(`/api/batches/${batchId}/events`, data),
 }
 

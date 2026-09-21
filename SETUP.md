@@ -86,6 +86,25 @@ npm run dev
 ## 📁 Project Structure
 
 ```
+
+## SMS sensor intake
+
+Twilio should POST its standard form fields (`From`, `Body`) to
+`/api/sms/webhook`. The registered beekeeper phone number identifies the
+owner, and the hive short-code is the hive name (case-insensitive).
+
+Exact message format:
+
+```text
+HIVE1 TEMP 34 HUM 55
+HIVE1 TEMP 34.5 HUM 55 SOUND 220
+```
+
+SMS readings reuse the latest recorded hive weight because the compact SMS
+format does not contain a scale measurement. A hive must therefore have one
+initial app/API reading with weight before SMS intake is accepted. For a local
+demo only, `POST /api/sms/simulate` accepts the same form fields; it is 404 in
+production (`APP_ENV=production`).
 Honey/
 ├── backend/                   # FastAPI server
 │   ├── main.py               # All routes (auth, hives, batches, verify, admin)

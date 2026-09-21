@@ -174,6 +174,8 @@ class VerifyBatchResponse(BaseModel):
     ledger_timeline: List[LedgerBlockResponse]
     chain_verification: Dict[str, Any]  # {valid: bool, errors: [str], first_tampering_at_index: int}
     authenticity_badge: str  # "VERIFIED" or "TAMPERED"
+    transfer_count: int
+    direct_trade: bool
 
 
 class AdminOverviewResponse(BaseModel):
@@ -187,6 +189,7 @@ class AdminOverviewResponse(BaseModel):
     avg_purity_score: float
     avg_hive_health_status: Dict[str, int]  # {"HEALTHY": 50, "WATCH": 10, ...}
     ledger_integrity: Dict[str, Any]  # Verification report
+    reputation_leaderboard: List[Dict[str, Any]]
 
 
 class SimulationResponse(BaseModel):

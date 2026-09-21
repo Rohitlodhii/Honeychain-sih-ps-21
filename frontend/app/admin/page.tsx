@@ -21,6 +21,13 @@ interface AdminData {
     first_tampering_at_index?: number
     total_blocks: number
   }
+  reputation_leaderboard: Array<{
+    cluster: string
+    batch_count: number
+    avg_purity: number
+    tamper_incidents: number
+    score: number
+  }>
 }
 
 export default function AdminPage() {
@@ -258,6 +265,18 @@ export default function AdminPage() {
             </ResponsiveContainer>
           </div>
         )}
+
+        <div className="card mt-6">
+          <h3 className="text-lg font-serif font-bold text-honey mb-4">Cooperative Reputation</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-cream">
+              <thead className="text-honey text-left"><tr><th>Cluster</th><th>Batches</th><th>Avg purity</th><th>Tamper incidents</th><th>Score</th></tr></thead>
+              <tbody>{data.reputation_leaderboard.map((entry) => (
+                <tr key={entry.cluster} className="border-t border-honey/20"><td>{entry.cluster}</td><td>{entry.batch_count}</td><td>{entry.avg_purity}</td><td>{entry.tamper_incidents}</td><td>{entry.score}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </main>
   )

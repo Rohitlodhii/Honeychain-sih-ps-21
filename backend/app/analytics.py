@@ -6,6 +6,7 @@ Based on real apiculture science ranges and thresholds.
 
 from typing import Dict, Any, Tuple, Optional, List
 from dataclasses import dataclass
+from .config import ApicultureThresholds
 
 
 @dataclass
@@ -28,25 +29,22 @@ class ApicultureAnalytics:
     - Honey moisture: ~20% max (BIS/Codex standard, prevents fermentation)
     """
 
-    # Apiculture thresholds
-    TEMP_MIN_OPTIMAL = 33.0
-    TEMP_MAX_OPTIMAL = 36.0
-    TEMP_CRITICAL_LOW = 28.0
-    TEMP_CRITICAL_HIGH = 40.0
-
-    HUMIDITY_MIN_OPTIMAL = 50.0
-    HUMIDITY_MAX_OPTIMAL = 65.0
-    HUMIDITY_CRITICAL_LOW = 40.0
-    HUMIDITY_CRITICAL_HIGH = 75.0
-
-    SOUND_MIN_HEALTHY = 180  # Hz
-    SOUND_MAX_HEALTHY = 260  # Hz
-    SOUND_ANOMALY_RANGE = 25  # Hz above/below healthy range triggers watch
-
-    MOISTURE_MAX_ACCEPTABLE = 20.0  # Percent (BIS/Codex)
-    MOISTURE_CAUTION = 18.0
-
-    WEIGHT_GAIN_HEALTHY_MIN = 0.5  # kg per week minimum (indicates foraging success)
+    # Kept as aliases so the analysis code remains readable; values live in
+    # config.py for calibration and explicit provenance.
+    TEMP_MIN_OPTIMAL = ApicultureThresholds.TEMP_MIN_OPTIMAL
+    TEMP_MAX_OPTIMAL = ApicultureThresholds.TEMP_MAX_OPTIMAL
+    TEMP_CRITICAL_LOW = ApicultureThresholds.TEMP_CRITICAL_LOW
+    TEMP_CRITICAL_HIGH = ApicultureThresholds.TEMP_CRITICAL_HIGH
+    HUMIDITY_MIN_OPTIMAL = ApicultureThresholds.HUMIDITY_MIN_OPTIMAL
+    HUMIDITY_MAX_OPTIMAL = ApicultureThresholds.HUMIDITY_MAX_OPTIMAL
+    HUMIDITY_CRITICAL_LOW = ApicultureThresholds.HUMIDITY_CRITICAL_LOW
+    HUMIDITY_CRITICAL_HIGH = ApicultureThresholds.HUMIDITY_CRITICAL_HIGH
+    SOUND_MIN_HEALTHY = ApicultureThresholds.SOUND_MIN_HEALTHY
+    SOUND_MAX_HEALTHY = ApicultureThresholds.SOUND_MAX_HEALTHY
+    SOUND_ANOMALY_RANGE = ApicultureThresholds.SOUND_ANOMALY_RANGE
+    MOISTURE_MAX_ACCEPTABLE = ApicultureThresholds.MOISTURE_MAX_ACCEPTABLE
+    MOISTURE_CAUTION = ApicultureThresholds.MOISTURE_CAUTION
+    WEIGHT_GAIN_HEALTHY_MIN = ApicultureThresholds.WEIGHT_GAIN_HEALTHY_MIN
 
     @staticmethod
     def analyze_hive_health(

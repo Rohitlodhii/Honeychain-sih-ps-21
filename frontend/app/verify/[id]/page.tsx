@@ -38,6 +38,8 @@ interface VerifyData {
     total_blocks: number
   }
   authenticity_badge: string
+  transfer_count: number
+  direct_trade: boolean
 }
 
 export default function VerifyPage({ params }: { params: { id: string } }) {
@@ -130,6 +132,11 @@ export default function VerifyPage({ params }: { params: { id: string } }) {
           <p className="text-cream/80">
             From {data.beekeeper_name}
             {data.beekeeper_cluster && ` • ${data.beekeeper_cluster}`}
+          </p>
+          <p className={`mt-3 text-sm font-semibold ${data.direct_trade ? 'text-sage' : 'text-honey'}`}>
+            {data.direct_trade
+              ? `Direct from ${data.beekeeper_cluster || 'the cooperative'} cluster — verified, no middleman markup`
+              : `${data.transfer_count} recorded transfers for this batch`}
           </p>
         </div>
 

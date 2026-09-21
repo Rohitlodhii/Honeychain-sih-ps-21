@@ -175,6 +175,20 @@ export default function Dashboard() {
     }
   }
 
+  const downloadComplianceReport = async (batchId: string) => {
+    try {
+      const response = await batchAPI.complianceReport(batchId)
+      const url = URL.createObjectURL(response.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `honeychain-${batchId}-compliance.pdf`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to download compliance report', err)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-espresso flex items-center justify-center">
@@ -433,6 +447,12 @@ export default function Dashboard() {
                             >
                               View Public Page
                             </Link>
+                            <button
+                              onClick={() => downloadComplianceReport(batch.id)}
+                              className="text-sm text-honey hover:text-amber"
+                            >
+                              Compliance Report
+                            </button>
                           </div>
                         </div>
                       ))}
