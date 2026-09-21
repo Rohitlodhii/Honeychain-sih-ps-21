@@ -3,7 +3,7 @@ HoneyChain Pydantic Schemas
 Request/response models for FastAPI endpoints.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -13,9 +13,10 @@ class UserRegisterRequest(BaseModel):
     name: str
     phone: str
     password: str
-    role: str = Field(..., description="'beekeeper' or 'cooperative_admin'")
+    role: Literal["beekeeper", "cooperative_admin"]
     cluster: Optional[str] = None
     email: Optional[str] = None
+    admin_invite_code: Optional[str] = None
 
 
 class UserLoginRequest(BaseModel):
@@ -82,13 +83,22 @@ class SensorReadingResponse(BaseModel):
         from_attributes = True
 
 
+class SensorReadingCreateRequest(BaseModel):
+    """Measured hive data supplied by an authenticated user or gateway."""
+    temperature_c: float
+    humidity_pct: float = Field(..., ge=0, le=100)
+    weight_kg: float = Field(..., ge=0)
+    sound_hz: Optional[float] = Field(None, ge=0)
+    recorded_at: Optional[datetime] = None
+
+
 class BatchCreateRequest(BaseModel):
     """Request to create a new batch (harvest)."""
     hive_id: str
     honey_type: str  # e.g., "wildflower", "acacia"
     quantity_kg: float
     apiary_location: str
-    moisture_pct: Optional[float] = None
+    moisture_pct: float = Field(..., ge=0, le=100, description="Measured moisture percentage; required for purity screening")
 
 
 class BatchEventRequest(BaseModel):

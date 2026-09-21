@@ -102,7 +102,10 @@ class HoneyLedger:
         Returns the new block.
         """
         prev_block = self.blocks[-1]
-        new_index = len(self.blocks)
+        # Indexes must advance from the previous persisted block.  Using
+        # ``len`` breaks a ledger reconstructed without its transient genesis
+        # block after an application restart.
+        new_index = prev_block.index + 1
         new_block = LedgerBlock(
             index=new_index,
             batch_id=batch_id,

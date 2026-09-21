@@ -3,17 +3,16 @@ HoneyChain Authentication Module
 JWT token management and password hashing.
 """
 
-import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from .models import User
+from .config import required_secret_key, admin_invite_code
 import uuid
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
@@ -47,14 +46,14 @@ class AuthService:
             expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        encoded_jwt = jwt.encode(to_encode, required_secret_key(), algorithm=ALGORITHM)
         return encoded_jwt
 
     @staticmethod
     def decode_token(token: str) -> Optional[Dict[str, Any]]:
         """Decode and validate a JWT token."""
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(token, required_secret_key(), algorithms=[ALGORITHM])
             user_id: str = payload.get("sub")
             if user_id is None:
                 return None
@@ -71,8 +70,14 @@ class AuthService:
         role: str,
         cluster: Optional[str] = None,
         email: Optional[str] = None,
+        admin_invite_code_value: Optional[str] = None,
     ) -> User:
         """Register a new user."""
+        if role == "cooperative_admin":
+            configured_code = admin_invite_code()
+            if not configured_code or admin_invite_code_value != configured_code:
+                raise ValueError("A valid cooperative-admin invite code is required")
+
         # Check if user already exists
         existing = db.query(User).filter(User.phone == phone).first()
         if existing:

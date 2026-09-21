@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database (optional - for production)
   # postgres:
@@ -29,7 +27,7 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/honey.db:/app/honey.db
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - honeychain
 

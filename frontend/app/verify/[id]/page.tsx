@@ -138,7 +138,7 @@ export default function VerifyPage({ params }: { params: { id: string } }) {
           <div className="mb-6 p-4 bg-brick/20 border-2 border-brick rounded-lg">
             <p className="font-semibold text-brick mb-2">⚠ Chain Integrity Issue</p>
             <p className="text-sm text-brick/90">
-              This honey batch's record has been tampered with. First tampering detected at block {data.chain_verification.first_tampering_at_index}.
+              This honey batch&apos;s record has been tampered with. First tampering detected at block {data.chain_verification.first_tampering_at_index}.
             </p>
             {data.chain_verification.errors.length > 0 && (
               <ul className="mt-2 text-xs space-y-1 text-brick/80">

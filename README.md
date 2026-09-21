@@ -1,6 +1,6 @@
 # HoneyChain: Blockchain-Based Honey Traceability & Smart Beekeeping
 
-A full-stack solution for KVIC's Honey Mission. Verify honey authenticity via QR codes backed by a tamper-proof ledger. Monitor hive health with AI analytics. Built for rural beekeepers and cooperative admins.
+A prototype for KVIC's Honey Mission. It records honey traceability events in a database-backed, hash-chained audit log and evaluates manually submitted sensor readings with a rule-based apiculture engine.
 
 ## 🎯 Problem & Solution
 
@@ -8,10 +8,10 @@ A full-stack solution for KVIC's Honey Mission. Verify honey authenticity via QR
 
 **Solution:**
 - QR-code batch verification backed by a real, from-scratch SHA-256 hash-chained ledger
-- AI/IoT hive monitoring (temperature, humidity, acoustics) to detect disease & predict yield
-- Simple touch-friendly UI for rural beekeepers (large buttons, Hindi-ready labels)
+- Rule-based hive-health monitoring (temperature, humidity, acoustics) to flag risk and estimate productivity
+- Simple touch-friendly English UI for rural beekeepers
 - KVIC cooperative admin dashboard for cluster-level supply & quality tracking
-- Fully offline-capable; sync when connected
+- Offline queueing/synchronization and Hindi UI are planned, not implemented in this prototype
 
 ---
 
@@ -19,7 +19,7 @@ A full-stack solution for KVIC's Honey Mission. Verify honey authenticity via QR
 
 - **Backend:** FastAPI (Python 3.11), SQLAlchemy, SQLite (dev) / Postgres (prod)
 - **Ledger:** Custom hash-chained ledger (SHA-256, proof-of-work, permissioned design)
-- **AI/IoT:** Rule-threshold engine with real apiculture ranges (brood 33–36°C, humidity 50–65%, acoustic 180–260 Hz)
+- **Analytics:** Rule-threshold engine with apiculture ranges (brood 33–36°C, humidity 50–65%, acoustic 180–260 Hz); sensor hardware ingestion is not yet included
 - **Frontend:** Next.js 14 (App Router), Tailwind CSS, Recharts
 - **Auth:** JWT (python-jose + passlib/bcrypt)
 - **Deploy:** Docker + docker-compose (local), Render/Railway (backend), Vercel (frontend)
@@ -103,7 +103,7 @@ cp .env.example .env
 # Edit .env if needed
 
 # Run server
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Frontend:**
@@ -135,8 +135,7 @@ npm run dev
 ### 2. **Create Hive & Monitor Health** (2 min)
 - Dashboard auto-loads with option "+ Add Hive"
 - Create: "Hive A", "Location: Forest North", Species: "Apis Mellifera"
-- Click "Simulate Reading" → health diagnosis appears
-- Try "Simulate Anomaly" to see disease detection (low temp + acoustic anomaly)
+- Submit a sensor reading through the API, then view the health diagnosis
 
 ### 3. **Harvest & Create Batch** (1 min)
 - Click "+ New Batch"
@@ -151,10 +150,8 @@ npm run dev
 - Authenticity badge: "VERIFIED" (all blocks valid)
 
 ### 5. **Tamper Test** (Advanced)
-- Stop backend: `docker-compose down`
-- Edit `honey.db` directly (sqlite3 CLI) to change a ledger hash
-- Restart backend
-- Refresh verify page → "TAMPERING DETECTED" badge appears
+- Modify a persisted ledger record in a disposable development database.
+- Refresh verification: the server reconstructs and verifies persisted ledger rows on every check, including after restart.
 
 ### 6. **KVIC Admin Dashboard** (Optional)
 - Register as "Cooperative Admin"
@@ -189,11 +186,11 @@ Block {
 
 **Verification:** Walk all blocks, recompute hashes, check linkage. Any tampering breaks the chain.
 
-**Why permissioned?** Beekeepers and QA labs are known to the network. No need for public consensus. Fast, offline-capable, zero gas fees.
+**Scope:** This is a prototype audit log, not a distributed blockchain or a substitute for access controls and independently operated nodes.
 
 ---
 
-## 🐝 AI/IoT Analytics
+## 🐝 Rule-Based Analytics
 
 Real apiculture science thresholds:
 
@@ -208,12 +205,12 @@ Real apiculture science thresholds:
 ### Honey Purity Scoring
 - **Moisture:** ≤20% compliant (BIS/Codex). 18–20% flagged for lab confirmation.
 - **Score:** 100 = excellent, 50–90 = caution, <50 = reject.
-- **Note:** Screening tool, not lab replacement. Field moisture ~0.8× lab HMF correlation.
+- **Note:** Screening tool, not a lab replacement.
 
 ### Productivity Prediction
 - Linear trend from historical weights
 - Estimate yield in 5.5 weeks, flag forage shortage
-- Confidence calibrated to data length
+- Heuristic confidence values; not statistically calibrated
 
 ---
 
@@ -250,10 +247,9 @@ Real apiculture science thresholds:
 - `GET /api/hives` — List user's hives
 - `GET /api/hives/{id}/readings` — Latest sensor readings
 - `GET /api/hives/{id}/health` — Diagnosis + productivity
-- `POST /api/hives/{id}/simulate?anomaly=false|true` — Generate 5 test readings
 
 ### Batches
-- `POST /api/batches` — Create batch (harvest), auto-generates QR, writes HARVEST block
+- `POST /api/batches` — Create batch (harvest), writes a HARVEST block; use the QR endpoint to retrieve its QR image
 - `GET /api/batches` — List batches
 - `POST /api/batches/{id}/events` — Add event (QUALITY_TEST, TRANSFER, PACKAGE, SALE)
 - `GET /api/batches/{id}/qr` — Stream PNG QR code
@@ -292,7 +288,7 @@ Real apiculture science thresholds:
 
 ---
 
-## 🚀 Production Deployment
+## 🚀 Production Deployment (operator runbook; not currently deployed)
 
 ### Backend (Render / Railway)
 
@@ -372,10 +368,6 @@ curl -H "Authorization: Bearer <TOKEN>" http://localhost:8000/api/hives
 # Get health
 curl -H "Authorization: Bearer <TOKEN>" http://localhost:8000/api/hives/{hive_id}/health
 
-# Simulate readings
-curl -X POST "http://localhost:8000/api/hives/{hive_id}/simulate?anomaly=false" \
-  -H "Authorization: Bearer <TOKEN>"
-
 # Create batch
 curl -X POST http://localhost:8000/api/batches \
   -H "Authorization: Bearer <TOKEN>" \
@@ -398,12 +390,12 @@ curl -H "Authorization: Bearer <ADMIN_TOKEN>" http://localhost:8000/api/admin/ov
 ### 2. **Full Flow Test**
 
 1. Register beekeeper + create hive
-2. Simulate 5 readings (1 normal, 1 anomalous)
+2. Submit measured sensor readings
 3. Check health diagnosis
 4. Create batch → get QR
 5. Verify as consumer → check ledger
-6. Manually tamper with DB hash
-7. Re-verify → "TAMPERING DETECTED"
+6. In a disposable DB, modify a ledger value
+7. Re-verify → verify returns a failed integrity report
 
 ---
 
@@ -427,8 +419,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ## 🎨 Design Philosophy
 
-- **Rural-first:** Large touch targets, minimal text, language-agnostic (emoji + icons)
-- **Trust-building:** Verify page is the hero moment—unforgeable hash chain visually prominent
+- **Rural-first:** Large touch targets and minimal English text; multilingual support is planned
+- **Trust-building:** Verify page presents the hash-chain integrity result and its limits
 - **Heritage:** Warm palette (espresso base, honey gold, amber) draws from apiculture & craftsmanship
 - **Simple:** No dark-mode neon, no generic SaaS card kit. Genuine motifs (hexagons, linked blocks)
 
@@ -506,10 +498,9 @@ MIT License. See LICENSE file.
 
 ---
 
-## 🌟 Demo Batch ID
+## 🌟 Demo data
 
-For testing the verify page without creating a batch:
-- Visit: http://localhost:3000/verify/demo-batch-001
+No fabricated public demo batch is bundled. Create a batch locally, then retrieve its QR from `GET /api/batches/{batch_id}/qr`.
 
 ---
 

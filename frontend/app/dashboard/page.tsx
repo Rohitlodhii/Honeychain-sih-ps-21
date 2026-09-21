@@ -134,7 +134,7 @@ export default function Dashboard() {
         honey_type: newBatchType,
         quantity_kg: parseFloat(newBatchQty),
         apiary_location: newBatchLocation,
-        moisture_pct: newBatchMoisture ? parseFloat(newBatchMoisture) : null,
+        moisture_pct: parseFloat(newBatchMoisture),
       })
       setBatches([...batches, response.data])
       setNewBatchHive('')
@@ -199,7 +199,7 @@ export default function Dashboard() {
       <header className="sticky top-0 z-50 bg-espresso/95 backdrop-blur border-b border-honey/20">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-honey">{user.name}'s Hives</h1>
+            <h1 className="text-2xl font-serif font-bold text-honey">{user.name}&apos;s Hives</h1>
             <p className="text-sm text-cream/60">{user.cluster || 'No cluster assigned'}</p>
           </div>
 
@@ -383,10 +383,13 @@ export default function Dashboard() {
                         <input
                           type="number"
                           step="0.1"
-                          placeholder="Moisture % (optional)"
+                          placeholder="Measured moisture %"
                           value={newBatchMoisture}
                           onChange={(e) => setNewBatchMoisture(e.target.value)}
                           className="input-field text-sm"
+                          min="0"
+                          max="100"
+                          required
                         />
                       </div>
                       <button type="submit" className="btn-primary w-full text-sm">

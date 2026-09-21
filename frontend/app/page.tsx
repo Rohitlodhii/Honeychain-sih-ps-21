@@ -2,10 +2,8 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { QRCodeSVG } from 'qrcode.react'
 
 export default function Home() {
-  const [demoHovered, setDemoHovered] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
@@ -86,55 +84,24 @@ export default function Home() {
               <Link href="/login?mode=register" className="btn-primary">
                 Join as Beekeeper
               </Link>
-              <a
-                href="#demo"
-                className="btn-secondary"
-              >
-                See Demo
-              </a>
             </div>
           </div>
 
-          {/* Right: Live Demo */}
-          <div
-            id="demo"
-            className="relative"
-            onMouseEnter={() => setDemoHovered(true)}
-            onMouseLeave={() => setDemoHovered(false)}
-          >
-            <div className={`card glow-honey transform transition-transform ${
-              demoHovered ? 'scale-105' : ''
-            }`}>
+          <div className="relative">
+            <div className="card glow-honey">
               <div className="text-center">
                 <h3 className="text-2xl font-serif font-bold text-honey mb-4">
-                  Scan a Honey Batch
+                  Verify a Registered Batch
                 </h3>
                 <p className="text-cream/80 mb-6">
-                  This QR code links to a real verification page. Point your phone camera and tap:
+                  QR codes are generated when a beekeeper creates a batch. Scan the code on the label to open its public traceability record.
                 </p>
-
-                {/* QR Code - links to demo batch */}
-                <div className="flex justify-center mb-6">
-                  <div className="bg-cream p-4 rounded-lg">
-                    <QRCodeSVG
-                      value="https://honeychain.vercel.app/verify/demo-batch-001"
-                      size={200}
-                      level="H"
-                      includeMargin={true}
-                    />
-                  </div>
-                </div>
-
                 <p className="text-sm text-cream/60">
-                  Tap the QR to see the full traceability timeline, purity score, and authenticity badge.
+                  Create a batch from the dashboard to generate a QR code. No fabricated demo batch is shown here.
                 </p>
               </div>
             </div>
 
-            {/* Floating badge */}
-            <div className="absolute top-4 right-4 badge-verified text-xs">
-              VERIFIED
-            </div>
           </div>
         </div>
       </section>
@@ -322,7 +289,7 @@ export default function Home() {
             Ready to Join HoneyChain?
           </h2>
           <p className="text-xl text-cream/80 mb-8 max-w-2xl mx-auto">
-            Whether you're a beekeeper protecting your heritage or a cooperative scaling trust, HoneyChain is built for you.
+            Whether you&apos;re a beekeeper protecting your heritage or a cooperative scaling trust, HoneyChain is built for you.
           </p>
 
           <div className="flex justify-center gap-4 flex-wrap">
@@ -335,7 +302,7 @@ export default function Home() {
           </div>
 
           <p className="text-sm text-cream/60 mt-8">
-            HoneyChain is built for KVIC's Honey Mission. All data stays within the cooperative network.
+            HoneyChain is built for KVIC&apos;s Honey Mission. All data stays within the cooperative network.
           </p>
         </div>
       </section>

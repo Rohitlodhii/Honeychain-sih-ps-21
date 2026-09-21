@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [name, setName] = useState('')
   const [role, setRole] = useState('beekeeper')
   const [cluster, setCluster] = useState('')
+  const [adminInviteCode, setAdminInviteCode] = useState('')
 
   useEffect(() => {
     // Check if already logged in
@@ -62,6 +63,7 @@ export default function LoginPage() {
         password: password,
         role: role,
         cluster: cluster,
+        admin_invite_code: adminInviteCode || undefined,
       })
 
       // Auto-login after registration
@@ -170,6 +172,19 @@ export default function LoginPage() {
               </div>
             )}
 
+            {isRegister && role === 'cooperative_admin' && (
+              <div>
+                <label className="block text-sm font-semibold text-honey mb-2">KVIC Admin Invite Code</label>
+                <input
+                  type="password"
+                  value={adminInviteCode}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminInviteCode(e.target.value)}
+                  className="input-field"
+                  required
+                />
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -196,7 +211,7 @@ export default function LoginPage() {
 
         {/* Disclaimer */}
         <p className="text-center text-cream/60 text-xs">
-          HoneyChain is built for KVIC's Honey Mission. Your data is protected and shared only within the cooperative network.
+          HoneyChain is built for KVIC&apos;s Honey Mission. Your data is protected and shared only within the cooperative network.
         </p>
       </div>
     </div>

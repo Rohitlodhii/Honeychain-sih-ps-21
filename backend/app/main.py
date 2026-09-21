@@ -3,7 +3,6 @@ HoneyChain FastAPI Backend
 Main application with all routes for authentication, hives, batches, ledger, and verification.
 """
 
-import os
 import uuid
 import random
 from datetime import datetime
@@ -11,6 +10,7 @@ from typing import Optional, List
 from io import BytesIO
 
 from fastapi import FastAPI, Depends, HTTPException, Header, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -22,7 +22,7 @@ from .database import get_db_config, get_db, DatabaseConfig
 from .models import User, Hive, Batch, SensorReading, LedgerBlock
 from .schemas import (
     UserRegisterRequest, UserLoginRequest, UserResponse, TokenResponse,
-    HiveCreateRequest, HiveResponse, SensorReadingResponse,
+    HiveCreateRequest, HiveResponse, SensorReadingResponse, SensorReadingCreateRequest,
     BatchCreateRequest, BatchEventRequest, BatchResponse, LedgerBlockResponse,
     HiveHealthDiagnosisResponse, ProductivityPredictionResponse,
     VerifyBatchResponse, AdminOverviewResponse, SimulationResponse,
@@ -30,6 +30,7 @@ from .schemas import (
 from .auth import AuthService
 from .ledger import HoneyLedger, LedgerBlock as LedgerBlockModel
 from .analytics import ApicultureAnalytics
+from .config import frontend_url, required_secret_key, cors_origins
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -37,9 +38,34 @@ app = FastAPI(
     description="Blockchain-based honey traceability for KVIC's Honey Mission",
     version="1.0.0",
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins(),
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
-# Global ledger (in-memory for demo; in production, serialize to DB)
-global_ledger = HoneyLedger()
+def persisted_ledger(db: Session) -> HoneyLedger:
+    """Reconstruct the ledger from durable DB rows for every write/check.
+
+    This makes integrity verification survive process restarts and avoids an
+    in-memory source of truth. The database intentionally stores only business
+    events (not the transient genesis block); each persisted event hash and all
+    persisted inter-event links are verified.
+    """
+    rows = db.query(LedgerBlock).order_by(LedgerBlock.index).all()
+    if not rows:
+        return HoneyLedger()
+    return HoneyLedger.from_dict({"blocks": [
+        {
+            "index": row.index, "batch_id": row.batch_id,
+            "event_type": row.event_type, "payload": row.payload,
+            "actor": row.actor, "timestamp": row.timestamp_str,
+            "prev_hash": row.prev_hash, "nonce": row.nonce, "hash": row.hash,
+        }
+        for row in rows
+    ]})
 
 
 # ============================================================================
@@ -81,9 +107,10 @@ def register(request: UserRegisterRequest, db: Session = Depends(get_db)):
             name=request.name,
             phone=request.phone,
             password=request.password,
-            role=request.role,
-            cluster=request.cluster,
-            email=request.email,
+        role=request.role,
+        cluster=request.cluster,
+        email=request.email,
+        admin_invite_code_value=request.admin_invite_code,
         )
         return user
     except ValueError as e:
@@ -307,9 +334,7 @@ def create_batch(
         raise HTTPException(status_code=404, detail="Hive not found")
 
     # Analyze honey purity
-    purity_result = ApicultureAnalytics.score_purity(
-        moisture_pct=request.moisture_pct or 18.5,
-    )
+    purity_result = ApicultureAnalytics.score_purity(moisture_pct=request.moisture_pct)
 
     batch = Batch(
         id=str(uuid.uuid4()),
@@ -336,7 +361,7 @@ def create_batch(
         "moisture_pct": request.moisture_pct,
         "purity_score": purity_result["purity_score"],
     }
-    block = global_ledger.append_event(
+    block = persisted_ledger(db).append_event(
         batch_id=batch.id,
         event_type="HARVEST",
         payload=harvest_payload,
@@ -404,7 +429,7 @@ def add_batch_event(
     batch.current_owner = request.payload.get("new_owner", batch.current_owner)
 
     # Append block to ledger
-    block = global_ledger.append_event(
+    block = persisted_ledger(db).append_event(
         batch_id=batch.id,
         event_type=request.event_type,
         payload=request.payload,
@@ -448,8 +473,7 @@ def get_batch_qr(
     if not batch:
         raise HTTPException(status_code=404, detail="Batch not found")
 
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    verify_url = f"{frontend_url}/verify/{batch_id}"
+    verify_url = f"{frontend_url()}/verify/{batch_id}"
 
     qr = qrcode.QRCode(
         version=1,
@@ -490,7 +514,7 @@ def verify_batch(batch_id: str, db: Session = Depends(get_db)):
     ).all()
 
     # Verify ledger integrity
-    chain_verification = global_ledger.verify_chain()
+    chain_verification = persisted_ledger(db).verify_chain()
     authenticity_badge = "VERIFIED" if chain_verification["valid"] else "TAMPERED"
 
     return VerifyBatchResponse(
@@ -541,15 +565,28 @@ def admin_overview(
     # Average purity
     avg_purity = db.query(func.avg(Batch.purity_score)).scalar() or 0
 
-    # Health status aggregates (dummy for now; in production, track latest health per hive)
-    avg_hive_health_status = {
-        "HEALTHY": 50,
-        "WATCH": 10,
-        "HIGH_RISK": 2,
-    }
+    # Use each hive's latest actual sensor reading. Hives without readings are
+    # deliberately excluded rather than assigned a fabricated health status.
+    latest_by_hive = db.query(
+        SensorReading.hive_id, func.max(SensorReading.recorded_at).label("recorded_at")
+    ).group_by(SensorReading.hive_id).subquery()
+    latest_readings = db.query(SensorReading).join(
+        latest_by_hive,
+        (SensorReading.hive_id == latest_by_hive.c.hive_id)
+        & (SensorReading.recorded_at == latest_by_hive.c.recorded_at),
+    ).all()
+    avg_hive_health_status = {"HEALTHY": 0, "WATCH": 0, "HIGH_RISK": 0}
+    for reading in latest_readings:
+        diagnosis = ApicultureAnalytics.analyze_hive_health(
+            temperature_c=reading.temperature_c,
+            humidity_pct=reading.humidity_pct,
+            sound_hz=reading.sound_hz,
+            weight_kg=reading.weight_kg,
+        )
+        avg_hive_health_status[diagnosis.status] += 1
 
     # Ledger integrity
-    chain_verification = global_ledger.verify_chain()
+    chain_verification = persisted_ledger(db).verify_chain()
 
     return AdminOverviewResponse(
         total_beekeepers=total_beekeepers,
@@ -571,6 +608,9 @@ def admin_overview(
 @app.on_event("startup")
 async def startup():
     """Initialize database on app startup."""
+    # Fail before serving traffic if a production secret/domain was omitted.
+    required_secret_key()
+    frontend_url()
     db_config = get_db_config()
     db_config.init_db()
 
