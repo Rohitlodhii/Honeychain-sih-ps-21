@@ -12,7 +12,7 @@ from io import BytesIO
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-from fastapi import FastAPI, Depends, HTTPException, Header, Query, Form
+from fastapi import FastAPI, Depends, HTTPException, Header, Query, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
@@ -33,7 +33,7 @@ from .schemas import (
 from .auth import AuthService
 from .ledger import HoneyLedger, LedgerBlock as LedgerBlockModel
 from .analytics import ApicultureAnalytics
-from .config import frontend_url, required_secret_key, cors_origins, development_only_features_enabled
+from .config import frontend_url, required_secret_key, cors_origins, development_only_features_enabled, validate_twilio_signature
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -390,13 +390,16 @@ def ingest_sms_reading(from_phone: str, body: str, db: Session) -> Response:
 
 
 @app.post("/api/sms/webhook")
-def sms_webhook(
-    From: str = Form(...),
-    Body: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    """Twilio-compatible form webhook. Configure Twilio signature validation before public deployment."""
-    return ingest_sms_reading(From, Body, db)
+async def sms_webhook(request: Request, db: Session = Depends(get_db)):
+    """Twilio form webhook; production rejects unsigned or spoofed requests."""
+    form = await request.form()
+    params = {key: str(value) for key, value in form.items()}
+    if not validate_twilio_signature(request.headers.get("X-Twilio-Signature"), str(request.url), params):
+        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
+    from_phone, body = params.get("From"), params.get("Body")
+    if not from_phone or not body:
+        raise HTTPException(status_code=422, detail="Twilio From and Body are required")
+    return ingest_sms_reading(from_phone, body, db)
 
 
 @app.post("/api/sms/simulate")

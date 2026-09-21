@@ -1,6 +1,9 @@
 """Runtime configuration with explicit, documented development defaults."""
 
 import os
+import base64
+import hashlib
+import hmac
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -52,6 +55,24 @@ def admin_invite_code() -> str | None:
 def development_only_features_enabled() -> bool:
     """Demo seed endpoints must never be exposed by a production process."""
     return not is_production()
+
+
+def validate_twilio_signature(signature: str | None, request_url: str, params: dict[str, str]) -> bool:
+    """Validate Twilio's HMAC-SHA1 form-webhook signature in production.
+
+    Twilio signs the exact URL plus alphabetically sorted POST parameters using
+    the account auth token. Development deliberately bypasses this check so
+    `/api/sms/simulate` and local webhook exercises work without credentials.
+    """
+    if not is_production():
+        return True
+    token = os.getenv("TWILIO_AUTH_TOKEN")
+    configured_url = os.getenv("TWILIO_WEBHOOK_URL")
+    if not token or not configured_url or not signature:
+        return False
+    signed_value = configured_url + "".join(key + params[key] for key in sorted(params))
+    expected = base64.b64encode(hmac.new(token.encode(), signed_value.encode(), hashlib.sha1).digest()).decode()
+    return hmac.compare_digest(expected, signature)
 
 
 class ApicultureThresholds:
