@@ -46,7 +46,6 @@ export default function Dashboard() {
   const [showNewBatch, setShowNewBatch] = useState(false)
   const [selectedHive, setSelectedHive] = useState<string>('')
   const [hiveHealth, setHiveHealth] = useState<Record<string, HealthStatus>>({})
-  const [simulatingHive, setSimulatingHive] = useState<string>('')
 
   // Form states
   const [newHiveName, setNewHiveName] = useState('')
@@ -58,6 +57,10 @@ export default function Dashboard() {
   const [newBatchQty, setNewBatchQty] = useState('')
   const [newBatchLocation, setNewBatchLocation] = useState('')
   const [newBatchMoisture, setNewBatchMoisture] = useState('')
+  const [readingTemp, setReadingTemp] = useState('')
+  const [readingHumidity, setReadingHumidity] = useState('')
+  const [readingWeight, setReadingWeight] = useState('')
+  const [readingSound, setReadingSound] = useState('')
 
   // Load data
   useEffect(() => {
@@ -155,23 +158,22 @@ export default function Dashboard() {
     }
   }
 
-  const handleSimulate = async (hiveId: string, withAnomaly: boolean) => {
-    setSimulatingHive(hiveId)
+  const handleCreateReading = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedHive) return
     try {
-      const response = await hiveAPI.simulate(hiveId, withAnomaly)
+      await hiveAPI.createReading(selectedHive, {
+        temperature_c: parseFloat(readingTemp), humidity_pct: parseFloat(readingHumidity),
+        weight_kg: parseFloat(readingWeight), sound_hz: readingSound ? parseFloat(readingSound) : null,
+      })
+      const response = await hiveAPI.getHealth(selectedHive)
       setHiveHealth((prev) => ({
         ...prev,
-        [hiveId]: response.data.health_status,
+        [selectedHive]: response.data.health,
       }))
-      // Use safe innerHTML instead of raw alert
-      const message = `Simulation complete. Status: ${response.data.health_status.status}`
-      const safeDiv = document.createElement('div')
-      safeDiv.innerHTML = escapeHtml(message)
-      alert(safeDiv.textContent)
+      setReadingTemp(''); setReadingHumidity(''); setReadingWeight(''); setReadingSound('')
     } catch (err) {
-      console.error('Simulation failed', err)
-    } finally {
-      setSimulatingHive('')
+      console.error('Failed to record reading', err)
     }
   }
 
@@ -335,22 +337,13 @@ export default function Dashboard() {
                       ))}
                     </div>
 
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        onClick={() => handleSimulate(selectedHive, false)}
-                        disabled={simulatingHive === selectedHive}
-                        className="btn-secondary text-sm disabled:opacity-50"
-                      >
-                        {simulatingHive === selectedHive ? 'Simulating...' : 'Simulate Reading'}
-                      </button>
-                      <button
-                        onClick={() => handleSimulate(selectedHive, true)}
-                        disabled={simulatingHive === selectedHive}
-                        className="btn-secondary text-sm disabled:opacity-50"
-                      >
-                        {simulatingHive === selectedHive ? 'Simulating...' : 'Simulate Anomaly'}
-                      </button>
-                    </div>
+                    <form onSubmit={handleCreateReading} className="mt-4 grid sm:grid-cols-5 gap-2">
+                      <input className="input-field text-sm" type="number" step="0.1" placeholder="Temp °C" value={readingTemp} onChange={(e) => setReadingTemp(e.target.value)} required />
+                      <input className="input-field text-sm" type="number" step="0.1" placeholder="Humidity %" value={readingHumidity} onChange={(e) => setReadingHumidity(e.target.value)} required />
+                      <input className="input-field text-sm" type="number" step="0.1" placeholder="Weight kg" value={readingWeight} onChange={(e) => setReadingWeight(e.target.value)} required />
+                      <input className="input-field text-sm" type="number" step="0.1" placeholder="Sound Hz" value={readingSound} onChange={(e) => setReadingSound(e.target.value)} />
+                      <button type="submit" className="btn-secondary text-sm">Record reading</button>
+                    </form>
                   </div>
                 )}
 
