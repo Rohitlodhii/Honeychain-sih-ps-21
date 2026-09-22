@@ -30,6 +30,9 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: true,
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   icons: {
     icon: [
       { url: '/favicon.ico' },
