@@ -69,7 +69,15 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
-      const payload: Record<string, unknown> = {
+      const payload: {
+        name: string
+        phone: string
+        password: string
+        role: Role
+        cluster?: string
+        email?: string
+        admin_invite_code?: string
+      } = {
         name: trimmedName,
         phone: trimmedPhone,
         password,
