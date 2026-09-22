@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Same-origin reverse proxy -> EC2 FastAPI over http (server-side only).
+// The browser only ever talks to `/api/backend`, so the http:// EC2 URL is
+// never fetched from the page: no mixed-content block, no backend CORS issue.
+const API_URL = '/api/backend'
 
 // Create axios instance with default headers
 const apiClient = axios.create({

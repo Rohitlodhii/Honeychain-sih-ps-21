@@ -4,7 +4,7 @@
  * - API (/api/...) and cross-origin: network-only, never cached (auth/ledger traffic).
  */
 
-const VERSION = 'honeychain-v1'
+const VERSION = 'honeychain-v2'
 const APP_SHELL = ['/', '/offline', '/manifest.webmanifest']
 
 self.addEventListener('install', (event) => {
