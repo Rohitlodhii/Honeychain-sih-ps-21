@@ -19,13 +19,9 @@ interface HealthStatus {
   reasons: string[]
 }
 
-// XSS Prevention: Escape HTML special characters to prevent XSS - uses textContent to sanitize
-function escapeHtml(text: string): string {
-  // Create a temporary element and set textContent to escape HTML entities
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
+// NOTE: React auto-escapes all interpolated strings, so no manual
+// escapeHtml() is needed. (A manual div.innerHTML escape + JSX render
+// would double-escape and show entities like &amp;lt; to users.)
 
 interface Batch {
   id: string
@@ -131,15 +127,33 @@ export default function Dashboard() {
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault()
+    // newBatchHive was never bound to a form input, so it stayed '' and the
+    // backend returned 404 "Hive not found". Fall back to the selected hive.
+    const hiveId = (newBatchHive || selectedHive || '').trim()
+    if (!hiveId) {
+      alert('Create/select a hive first before harvesting a batch.')
+      return
+    }
     try {
       const response = await batchAPI.create({
-        hive_id: newBatchHive,
+        hive_id: hiveId,
         honey_type: newBatchType,
         quantity_kg: parseFloat(newBatchQty),
         apiary_location: newBatchLocation,
         moisture_pct: parseFloat(newBatchMoisture),
       })
-      setBatches([...batches, response.data])
+      // Backend returns {id/batch_id, hive_id, ...}; normalize to Batch shape
+      // so the list filter (b.hive_id === selectedHive) keeps working.
+      const created = response.data
+      const newBatch: Batch = {
+        id: created.id || created.batch_id,
+        hive_id: created.hive_id || hiveId,
+        honey_type: created.honey_type || newBatchType,
+        quantity_kg: created.quantity_kg ?? parseFloat(newBatchQty),
+        status: created.status,
+        purity_score: created.purity_score,
+      }
+      setBatches([...batches, newBatch])
       setNewBatchHive('')
       setNewBatchType('')
       setNewBatchQty('')
@@ -147,14 +161,12 @@ export default function Dashboard() {
       setNewBatchMoisture('')
       setShowNewBatch(false)
 
-      // Use safe innerHTML instead of raw alert
-      const message = `Batch created! QR code generated. Batch ID: ${response.data.batch_id}`
-      const safeDiv = document.createElement('div')
-      safeDiv.innerHTML = escapeHtml(message)
-      console.log('Batch created:', safeDiv.textContent)
-      alert(safeDiv.textContent)
-    } catch (err) {
+      console.log('Batch created:', `Batch created! QR code generated. Batch ID: ${response.data.batch_id}`)
+      alert(`Batch created! QR code generated. Batch ID: ${response.data.batch_id}`)
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || err?.message || 'Unknown error'
       console.error('Failed to create batch', err)
+      alert(`Failed to create batch: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`)
     }
   }
 
@@ -331,8 +343,7 @@ export default function Dashboard() {
                     <div className="mt-4 space-y-2">
                       {currentHealth.reasons.map((reason, idx) => (
                         <p key={idx} className="text-sm text-cream/80">
-                          {/* XSS: Escape reason content before rendering */}
-                          {escapeHtml(reason)}
+                          {reason}
                         </p>
                       ))}
                     </div>
@@ -411,8 +422,7 @@ export default function Dashboard() {
                         <div key={batch.id} className="bg-espresso/50 p-4 rounded-lg border border-honey/20">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              {/* XSS: Escape honey_type before rendering */}
-                              <h3 className="font-semibold text-cream">{escapeHtml(batch.honey_type)}</h3>
+                              <h3 className="font-semibold text-cream">{batch.honey_type}</h3>
                               <p className="text-sm text-cream/60">{batch.quantity_kg} kg</p>
                             </div>
                             <div className={`text-xs font-semibold ${
