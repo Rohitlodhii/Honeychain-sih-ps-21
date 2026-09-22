@@ -4,12 +4,8 @@ import { useState, useEffect } from 'react'
 import { verifyAPI } from '@/lib/api'
 import Link from 'next/link'
 
-// XSS Prevention: Escape HTML special characters
-function escapeHtml(text: string): string {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
+// NOTE: React auto-escapes interpolated strings — render API data directly.
+// (Manual escapeHtml + JSX would double-escape and show raw entities.)
 
 interface VerifyData {
   batch_id: string
@@ -79,7 +75,7 @@ export default function VerifyPage({ params }: { params: { id: string } }) {
         <div className="max-w-md text-center">
           <div className="text-5xl text-brick mb-4">⚠</div>
           <h1 className="text-2xl font-serif font-bold text-cream mb-4">Batch Not Found</h1>
-          <p className="text-cream/80 mb-6">{escapeHtml(error)}</p>
+          <p className="text-cream/80 mb-6">{error}</p>
           <Link href="/" className="btn-primary">
             Back to Home
           </Link>
@@ -150,7 +146,7 @@ export default function VerifyPage({ params }: { params: { id: string } }) {
             {data.chain_verification.errors.length > 0 && (
               <ul className="mt-2 text-xs space-y-1 text-brick/80">
                 {data.chain_verification.errors.map((err, idx) => (
-                  <li key={idx}>• {escapeHtml(err)}</li>
+                  <li key={idx}>• {err}</li>
                 ))}
               </ul>
             )}
@@ -331,7 +327,7 @@ export default function VerifyPage({ params }: { params: { id: string } }) {
               </div>
               <div>
                 <p className="text-xs text-cream/60 uppercase font-semibold">Batch ID</p>
-                <p className="text-sm font-mono text-honey truncate">{escapeHtml(data.batch_id)}</p>
+                <p className="text-sm font-mono text-honey truncate">{data.batch_id}</p>
               </div>
             </div>
           </div>
