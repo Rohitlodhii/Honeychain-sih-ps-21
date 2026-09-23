@@ -16,9 +16,11 @@ import { BatchTimeline } from "@/components/dashboard/batch-timeline"
 import { ComplianceDownloadButton, QrSection } from "@/components/dashboard/qr-compliance"
 import { UpdateBatchDialog } from "@/components/dashboard/update-batch-dialog"
 import { ArrowLeft, Pencil } from "lucide-react"
+import { useI18n } from "@/lib/i18n/context"
 
 export default function BatchDetailPage({ params }: { params: { batchId: string } }) {
   const { batchId } = params
+  const { t, tag } = useI18n()
   const [batch, setBatch] = React.useState<Batch | null>(null)
   const [hives, setHives] = React.useState<Hive[]>([])
   const [verify, setVerify] = React.useState<VerifyBatchResponse | null>(null)
@@ -36,7 +38,7 @@ export default function BatchDetailPage({ params }: { params: { batchId: string 
       ])
       const found = ((bRes.data ?? []) as Batch[]).find((b) => b.id === batchId) ?? null
       if (!found) {
-        setError("Batch not found.")
+        setError(t.batchDetail.notFound)
       } else {
         setBatch(found)
       }
@@ -52,7 +54,7 @@ export default function BatchDetailPage({ params }: { params: { batchId: string 
     } finally {
       setLoading(false)
     }
-  }, [batchId])
+  }, [batchId, t])
 
   React.useEffect(() => { load() }, [load])
 
@@ -71,10 +73,10 @@ export default function BatchDetailPage({ params }: { params: { batchId: string 
   if (error || !batch) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" asChild><Link href="/dashboard/batches"><ArrowLeft className="mr-1 h-4 w-4" /> Back to batches</Link></Button>
+        <Button variant="ghost" size="sm" asChild><Link href="/dashboard/batches"><ArrowLeft className="mr-1 h-4 w-4" /> {t.batchDetail.backToBatches}</Link></Button>
         <Alert variant="destructive">
-          <AlertTitle>Unable to load batch</AlertTitle>
-          <AlertDescription className="flex items-center gap-2">{error ?? "Batch not found."} <Button size="sm" variant="outline" onClick={load}>Retry</Button></AlertDescription>
+          <AlertTitle>{t.batchDetail.loadFail}</AlertTitle>
+          <AlertDescription className="flex items-center gap-2">{error ?? t.batchDetail.notFound} <Button size="sm" variant="outline" onClick={load}>{t.common.retry}</Button></AlertDescription>
         </Alert>
       </div>
     )
@@ -90,7 +92,7 @@ export default function BatchDetailPage({ params }: { params: { batchId: string 
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild className="w-fit"><Link href="/dashboard/batches"><ArrowLeft className="mr-1 h-4 w-4" /> Back to batches</Link></Button>
+      <Button variant="ghost" size="sm" asChild className="w-fit"><Link href="/dashboard/batches"><ArrowLeft className="mr-1 h-4 w-4" /> {t.batchDetail.backToBatches}</Link></Button>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
@@ -99,38 +101,38 @@ export default function BatchDetailPage({ params }: { params: { batchId: string 
             <BatchStatusBadge status={batch.status} />
             {verify && <VerifyBadge badge={verify.authenticity_badge} />}
           </div>
-          <p className="text-sm text-muted-foreground">{batch.honey_type} • {batch.quantity_kg} kg • Harvested {new Date(batch.harvest_date).toLocaleDateString()}</p>
+          <p className="text-sm text-muted-foreground">{batch.honey_type} • {batch.quantity_kg} kg • {t.batchDetail.fHarvest} {new Date(batch.harvest_date).toLocaleDateString(tag)}</p>
         </div>
-        <Button onClick={() => setUpdateOpen(true)}><Pencil className="mr-1 h-4 w-4" /> Update Batch</Button>
+        <Button onClick={() => setUpdateOpen(true)}><Pencil className="mr-1 h-4 w-4" /> {t.batchDetail.updateBatch}</Button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Batch overview */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Batch Overview</CardTitle>
-            <CardDescription>Harvest and purity details for this honey lot.</CardDescription>
+            <CardTitle>{t.batchDetail.overview}</CardTitle>
+            <CardDescription>{t.batchDetail.overviewDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-3">
-              <div><dt className="text-muted-foreground">Batch ID</dt><dd className="font-mono font-semibold" title={batch.id}>{shortId(batch.id)}</dd></div>
-              <div><dt className="text-muted-foreground">Honey Type</dt><dd className="font-medium">{batch.honey_type}</dd></div>
-              <div><dt className="text-muted-foreground">Quantity</dt><dd className="font-medium">{batch.quantity_kg} kg</dd></div>
-              <div><dt className="text-muted-foreground">Hive</dt><dd className="font-medium">{hiveName}</dd></div>
-              <div><dt className="text-muted-foreground">Apiary Location</dt><dd className="font-medium">{batch.apiary_location}</dd></div>
-              <div><dt className="text-muted-foreground">Harvest Date</dt><dd className="font-medium">{new Date(batch.harvest_date).toLocaleDateString()}</dd></div>
-              <div><dt className="text-muted-foreground">Moisture</dt><dd className="font-medium">{batch.moisture_pct != null ? `${batch.moisture_pct}%` : "—"}</dd></div>
-              <div><dt className="text-muted-foreground">Purity Score</dt><dd className="font-medium">{batch.purity_score != null ? Number(batch.purity_score).toFixed(1) : "—"}</dd></div>
-              <div><dt className="text-muted-foreground">Current Status</dt><dd><BatchStatusBadge status={batch.status} /></dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fBatchId}</dt><dd className="font-mono font-semibold" title={batch.id}>{shortId(batch.id)}</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fHoneyType}</dt><dd className="font-medium">{batch.honey_type}</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fQuantity}</dt><dd className="font-medium">{batch.quantity_kg} kg</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fHive}</dt><dd className="font-medium">{hiveName}</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fLocation}</dt><dd className="font-medium">{batch.apiary_location}</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fHarvest}</dt><dd className="font-medium">{new Date(batch.harvest_date).toLocaleDateString(tag)}</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fMoisture}</dt><dd className="font-medium">{batch.moisture_pct != null ? `${batch.moisture_pct}%` : "—"}</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fPurity}</dt><dd className="font-medium">{batch.purity_score != null ? Number(batch.purity_score).toFixed(1) : "—"}</dd></div>
+              <div><dt className="text-muted-foreground">{t.batchDetail.fStatus}</dt><dd><BatchStatusBadge status={batch.status} /></dd></div>
             </dl>
             <div className="mt-4 rounded-lg border p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-medium">Purity screening</span>
+                <span className="text-sm font-medium">{t.batchDetail.purityScreening}</span>
                 {purityStatus && <PurityBadge status={purityStatus} />}
               </div>
               {batch.purity_score != null && <Progress value={Math.min(100, Math.max(0, Number(batch.purity_score)))} className="mt-3" />}
               <p className="mt-2 text-xs text-muted-foreground">
-                Purity screening uses the BIS/Codex threshold of ≤ 20% moisture. This is a screening check based on backend analysis, not a laboratory certification.
+                {t.batchDetail.purityNote}
               </p>
             </div>
             <div className="mt-4">
@@ -142,8 +144,8 @@ export default function BatchDetailPage({ params }: { params: { batchId: string 
         {/* Consumer verification / QR */}
         <Card id="qr">
           <CardHeader>
-            <CardTitle>Consumer Verification</CardTitle>
-            <CardDescription>QR code links to the public verification page.</CardDescription>
+            <CardTitle>{t.batchDetail.consumerTitle}</CardTitle>
+            <CardDescription>{t.batchDetail.consumerDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             <QrSection batchId={batch.id} />
@@ -154,16 +156,16 @@ export default function BatchDetailPage({ params }: { params: { batchId: string 
       {/* Lifecycle */}
       <Card>
         <CardHeader>
-          <CardTitle>Batch Lifecycle</CardTitle>
-          <CardDescription>Harvest → Quality Test → Transfer → Package → Sale. The harvest event is created automatically.</CardDescription>
+          <CardTitle>{t.batchDetail.lifecycle}</CardTitle>
+          <CardDescription>{t.batchDetail.lifecycleDesc}</CardDescription>
         </CardHeader>
         <CardContent>
           {verify ? (
             <BatchTimeline events={verify.ledger_timeline} />
           ) : (
             <Alert>
-              <AlertTitle>Timeline unavailable</AlertTitle>
-              <AlertDescription>Unable to load traceability events. Please try again.</AlertDescription>
+              <AlertTitle>{t.batchDetail.timelineFail}</AlertTitle>
+              <AlertDescription>{t.batchDetail.timelineFailDesc}</AlertDescription>
             </Alert>
           )}
         </CardContent>

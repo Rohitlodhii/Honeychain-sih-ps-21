@@ -4,6 +4,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import ServiceWorkerRegister from '@/components/sw-register'
 import { Toaster } from '@/components/ui/sonner'
+import { I18nProvider } from '@/lib/i18n/context'
 
 export const metadata: Metadata = {
   title: 'HoneyChain - Honey Traceability & Beekeeping',
@@ -46,7 +47,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="bg-background text-foreground font-sans antialiased">
-        {children}
+        <I18nProvider>
+          {children}
+        </I18nProvider>
         <Toaster position="top-center" richColors closeButton />
         <ServiceWorkerRegister />
       </body>

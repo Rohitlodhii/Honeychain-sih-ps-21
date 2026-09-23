@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { normalizeError } from "@/lib/api/client"
 import type { Batch, Hive, HiveHealthResponse } from "@/lib/api/types"
-import { useAuth } from "@/components/dashboard/auth-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,18 +20,11 @@ import {
 } from "@/components/ui/table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { HealthBadge } from "@/components/dashboard/status-badges"
-import { RecordReadingDialog } from "@/components/dashboard/record-reading-dialog"
-import { CreateBatchDialog } from "@/components/dashboard/create-batch-dialog"
 import { CreateHiveDialog } from "@/components/dashboard/create-hive-dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { AlertTriangle, Hexagon, Package, Plus } from "lucide-react"
+import { AlertTriangle, Hexagon, Plus } from "lucide-react"
 import { HarvestCalendar } from "@/components/dashboard/harvest-calendar"
+import { DATA_CHANGED_EVENT } from "@/components/dashboard/data-events"
+import { useI18n } from "@/lib/i18n/context"
 
 interface HiveWithHealth {
   hive: Hive
@@ -41,8 +33,8 @@ interface HiveWithHealth {
 }
 
 export default function OverviewPage() {
-  const { user } = useAuth()
   const router = useRouter()
+  const { t } = useI18n()
   const [hives, setHives] = React.useState<Hive[]>([])
   const [batches, setBatches] = React.useState<Batch[]>([])
   const [batchesLoading, setBatchesLoading] = React.useState(true)
@@ -52,9 +44,6 @@ export default function OverviewPage() {
   const [healthLoading, setHealthLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
-  const [recordOpen, setRecordOpen] = React.useState(false)
-  const [recordHiveId, setRecordHiveId] = React.useState("")
-  const [batchOpen, setBatchOpen] = React.useState(false)
   const [hiveOpen, setHiveOpen] = React.useState(false)
 
   const loadAll = React.useCallback(async () => {
@@ -67,14 +56,13 @@ export default function OverviewPage() {
       ])
       setHives(hivesRes.data)
       setBatches((batchesRes.data as Batch[]) ?? [])
-      if (hivesRes.data.length > 0 && !recordHiveId) setRecordHiveId(hivesRes.data[0].id)
     } catch (err) {
       setError(normalizeError(err).detail)
     } finally {
       setLoading(false)
       setBatchesLoading(false)
     }
-  }, [recordHiveId])
+  }, [])
 
   const loadHealth = React.useCallback(async (list: Hive[]) => {
     if (list.length === 0) return
@@ -140,6 +128,13 @@ export default function OverviewPage() {
     return { healthy, watch, high }
   }, [healthMap])
 
+  // Reload when a batch is created from the navbar action.
+  React.useEffect(() => {
+    const handler = () => refresh()
+    window.addEventListener(DATA_CHANGED_EVENT, handler)
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handler)
+  }, [refresh])
+
   const rows: HiveWithHealth[] = hives.map((h) => ({
     hive: h,
     health: healthMap[h.id] ?? null,
@@ -148,112 +143,71 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Welcome back, {user?.name ?? "Beekeeper"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Monitor your apiaries, honey production and traceability from one place.
-          </p>
-        </div>
-      <HarvestCalendar batches={batches} loading={loading || batchesLoading} />
-
-      <div className="flex flex-wrap gap-2">
-          <Button
-            disabled={hives.length === 0}
-            onClick={() => {
-              if (!recordHiveId && hives[0]) setRecordHiveId(hives[0].id)
-              setRecordOpen(true)
-            }}
-          >
-            <Plus className="mr-1 h-4 w-4" /> Record Reading
-          </Button>
-          <Button variant="outline" disabled={hives.length === 0} onClick={() => setBatchOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" /> Create Harvest Batch
-          </Button>
-        </div>
-      </div>
-
-      {hives.length > 1 && (
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Record reading for:</span>
-          <Select value={recordHiveId} onValueChange={setRecordHiveId}>
-            <SelectTrigger className="w-56"><SelectValue placeholder="Select hive" /></SelectTrigger>
-            <SelectContent>
-              {hives.map((h) => (
-                <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Unable to load hives</AlertTitle>
+          <AlertTitle>{t.overview.loadFail}</AlertTitle>
           <AlertDescription className="flex items-center gap-2">
             {error}
-            <Button size="sm" variant="outline" onClick={loadAll}>Retry</Button>
+            <Button size="sm" variant="outline" onClick={loadAll}>{t.common.retry}</Button>
           </AlertDescription>
         </Alert>
       )}
 
+      <HarvestCalendar batches={batches} loading={loading || batchesLoading} />
+
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Hives</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{t.overview.totalHives}</CardTitle></CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold">{hives.length}</div>}
-            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Hexagon className="h-3 w-3" /> Registered in your apiary</p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Hexagon className="h-3 w-3" /> {t.overview.registeredHint}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Healthy Hives</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{t.overview.healthyHives}</CardTitle></CardHeader>
           <CardContent>
             {loading || healthLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold text-emerald-600">{counts.healthy}</div>}
-            <p className="mt-1 text-xs text-muted-foreground">Status HEALTHY</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t.overview.healthyHint}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Hives to Watch</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{t.overview.watchHives}</CardTitle></CardHeader>
           <CardContent>
             {loading || healthLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold text-amber-600">{counts.watch}</div>}
-            <p className="mt-1 text-xs text-muted-foreground">Status WATCH</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t.overview.watchHint}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">High Risk</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{t.overview.highRisk}</CardTitle></CardHeader>
           <CardContent>
             {loading || healthLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold text-destructive">{counts.high}</div>}
-            <p className="mt-1 text-xs text-muted-foreground">Status HIGH_RISK</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t.overview.highRiskHint}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Hive Health */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Hive Health</CardTitle>
-          <Button variant="ghost" size="sm" asChild><Link href="/dashboard/hives">View all</Link></Button>
-        </CardHeader>
-        <CardContent>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-lg font-semibold tracking-tight">{t.overview.hiveHealth}</h2>
+          <Button variant="ghost" size="sm" asChild><Link href="/dashboard/hives">{t.overview.viewAll}</Link></Button>
+        </div>
           {loading ? (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border p-2">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Hive</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Confidence</TableHead>
-                    <TableHead>Temp</TableHead>
-                    <TableHead>Humidity</TableHead>
-                    <TableHead>Weight</TableHead>
-                    <TableHead>Sound</TableHead>
-                    <TableHead>Trend</TableHead>
-                    <TableHead>Est. Yield</TableHead>
-                    <TableHead>Next Harvest</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thHive}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thStatus}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thConfidence}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thTemp}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thHumidity}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thWeight}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thSound}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thTrend}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thYield}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thNext}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -276,24 +230,24 @@ export default function OverviewPage() {
             </div>
           ) : hives.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="font-medium">Your apiary is empty. Add your first hive to start monitoring.</p>
-              <Button className="mt-4" onClick={() => setHiveOpen(true)}><Plus className="mr-1 h-4 w-4" /> Add Hive</Button>
+              <p className="font-medium">{t.overview.empty}</p>
+              <Button className="mt-4" onClick={() => setHiveOpen(true)}><Plus className="mr-1 h-4 w-4" /> {t.overview.addHive}</Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border p-2">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Hive</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Confidence</TableHead>
-                    <TableHead>Temp</TableHead>
-                    <TableHead>Humidity</TableHead>
-                    <TableHead>Weight</TableHead>
-                    <TableHead>Sound</TableHead>
-                    <TableHead>Trend</TableHead>
-                    <TableHead>Est. Yield</TableHead>
-                    <TableHead>Next Harvest</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thHive}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thStatus}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thConfidence}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thTemp}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thHumidity}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thWeight}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thSound}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thTrend}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thYield}</TableHead>
+                    <TableHead className="bg-secondary">{t.overview.thNext}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -317,7 +271,7 @@ export default function OverviewPage() {
                           ) : health ? (
                             <HealthBadge status={health.health.status} />
                           ) : (
-                            <Badge variant="secondary">No readings</Badge>
+                            <Badge variant="secondary">{t.common.noReadings}</Badge>
                           )}
                         </TableCell>
                         {health ? (
@@ -331,7 +285,7 @@ export default function OverviewPage() {
                             <TableCell className="whitespace-nowrap">{health.productivity?.yield_estimate_kg ?? "—"} kg</TableCell>
                             <TableCell className="whitespace-nowrap">
                               {health.productivity?.next_harvest_days != null
-                                ? `${health.productivity.next_harvest_days} days`
+                                ? `${health.productivity.next_harvest_days} ${t.overview.daysSuffix}`
                                 : "—"}
                             </TableCell>
                           </>
@@ -339,8 +293,8 @@ export default function OverviewPage() {
                           <>
                             <TableCell colSpan={8} className="text-xs text-muted-foreground">
                               {healthError?.includes("No sensor readings")
-                                ? "No sensor readings yet. Record the first reading to begin hive health analysis."
-                                : healthError ?? "Health unavailable."}
+                                ? t.overview.noReadingsHint
+                                : healthError ?? t.overview.healthUnavailable}
                             </TableCell>
                           </>
                         )}
@@ -354,30 +308,16 @@ export default function OverviewPage() {
           {(counts.watch > 0 || counts.high > 0) && (
             <Alert className="mt-4">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Attention needed</AlertTitle>
+              <AlertTitle>{t.overview.attention}</AlertTitle>
               <AlertDescription>
-                {counts.watch > 0 && `${counts.watch} hive(s) need watching. `}
-                {counts.high > 0 && `${counts.high} hive(s) at high risk. `}
-                Open the hive detail page for diagnosis and recommendations.
+                {counts.watch > 0 && `${t.overview.watchMsg(counts.watch)} `}
+                {counts.high > 0 && `${t.overview.highMsg(counts.high)} `}
+                {t.overview.openDetailHint}
               </AlertDescription>
             </Alert>
           )}
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" asChild><Link href="/dashboard/batches"><Package className="mr-1 h-4 w-4" /> Go to Honey Batches</Link></Button>
-        <Button variant="outline" asChild><Link href="/dashboard/traceability">View Traceability</Link></Button>
       </div>
 
-      <RecordReadingDialog
-        open={recordOpen}
-        onOpenChange={setRecordOpen}
-        hiveId={recordHiveId}
-        hiveName={hives.find((h) => h.id === recordHiveId)?.name}
-        onSuccess={refresh}
-      />
-      <CreateBatchDialog open={batchOpen} onOpenChange={setBatchOpen} hives={hives} defaultHiveId={recordHiveId} onCreated={refresh} />
       <CreateHiveDialog open={hiveOpen} onOpenChange={setHiveOpen} onCreated={refresh} />
     </div>
   )

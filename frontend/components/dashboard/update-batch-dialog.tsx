@@ -24,13 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
-
-const EVENT_OPTIONS: { value: BatchEventType; label: string }[] = [
-  { value: "QUALITY_TEST", label: "Quality Test" },
-  { value: "TRANSFER", label: "Transfer" },
-  { value: "PACKAGE", label: "Package" },
-  { value: "SALE", label: "Sale" },
-]
+import { useI18n } from "@/lib/i18n/context"
 
 export function UpdateBatchDialog({
   open,
@@ -51,6 +45,14 @@ export function UpdateBatchDialog({
   const [price, setPrice] = React.useState("")
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [saving, setSaving] = React.useState(false)
+  const { t } = useI18n()
+
+  const EVENT_OPTIONS: { value: BatchEventType; label: string }[] = [
+    { value: "QUALITY_TEST", label: t.updateBatch.qualityTest },
+    { value: "TRANSFER", label: t.updateBatch.transfer },
+    { value: "PACKAGE", label: t.updateBatch.package },
+    { value: "SALE", label: t.updateBatch.sale },
+  ]
 
   const reset = () => {
     setEventType("QUALITY_TEST")
@@ -68,7 +70,7 @@ export function UpdateBatchDialog({
     const payload: Record<string, unknown> = {}
     if (eventType === "TRANSFER") {
       if (!newOwner.trim()) {
-        setSubmitError("New owner is required for a transfer.")
+        setSubmitError(t.updateBatch.errOwner)
         return
       }
       payload.new_owner = newOwner.trim()
@@ -85,7 +87,7 @@ export function UpdateBatchDialog({
       if (price.trim()) {
         const v = Number(price.trim())
         if (!Number.isFinite(v) || v < 0) {
-          setSubmitError("Price must be a non-negative number.")
+          setSubmitError(t.updateBatch.errPrice)
           return
         }
         payload.price = v
@@ -97,7 +99,7 @@ export function UpdateBatchDialog({
     setSaving(true)
     try {
       await api.batches.addEvent(batchId, { event_type: eventType, payload })
-      toast.success(`${eventType.replace("_", " ").toLowerCase()} record added`)
+      toast.success(t.updateBatch.addedToast(eventType))
       reset()
       onOpenChange(false)
       onSuccess?.()
@@ -112,12 +114,12 @@ export function UpdateBatchDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Update Batch</DialogTitle>
-          <DialogDescription>Add a new traceability event to this honey batch.</DialogDescription>
+          <DialogTitle>{t.updateBatch.title}</DialogTitle>
+          <DialogDescription>{t.updateBatch.desc}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Event Type</Label>
+            <Label>{t.updateBatch.eventType}</Label>
             <Select value={eventType} onValueChange={(v) => setEventType(v as BatchEventType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -131,33 +133,33 @@ export function UpdateBatchDialog({
           {eventType === "QUALITY_TEST" && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="ub-result">Test Result (optional)</Label>
-                <Input id="ub-result" placeholder="e.g. PASS, moisture 18.2%" value={result} onChange={(e) => setResult(e.target.value)} />
+                <Label htmlFor="ub-result">{t.updateBatch.testResult}</Label>
+                <Input id="ub-result" placeholder={t.updateBatch.testResultPh} value={result} onChange={(e) => setResult(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ub-notes">Notes (optional)</Label>
-                <Input id="ub-notes" placeholder="Lab or field observations" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Label htmlFor="ub-notes">{t.updateBatch.notes}</Label>
+                <Input id="ub-notes" placeholder={t.updateBatch.labPh} value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
             </>
           )}
 
           {eventType === "TRANSFER" && (
             <div className="space-y-2">
-              <Label htmlFor="ub-owner">New Owner</Label>
-              <Input id="ub-owner" placeholder="Buyer / cooperative name" value={newOwner} onChange={(e) => setNewOwner(e.target.value)} />
-              <p className="text-xs text-muted-foreground">The batch current owner is updated from this field.</p>
+              <Label htmlFor="ub-owner">{t.updateBatch.newOwner}</Label>
+              <Input id="ub-owner" placeholder={t.updateBatch.newOwnerPh} value={newOwner} onChange={(e) => setNewOwner(e.target.value)} />
+              <p className="text-xs text-muted-foreground">{t.updateBatch.ownerHint}</p>
             </div>
           )}
 
           {eventType === "PACKAGE" && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="ub-loc">Packaging Location (optional)</Label>
-                <Input id="ub-loc" placeholder="Packing unit" value={location} onChange={(e) => setLocation(e.target.value)} />
+                <Label htmlFor="ub-loc">{t.updateBatch.packLoc}</Label>
+                <Input id="ub-loc" placeholder={t.updateBatch.packLocPh} value={location} onChange={(e) => setLocation(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ub-pnotes">Notes (optional)</Label>
-                <Input id="ub-pnotes" placeholder="Jar size, lot notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Label htmlFor="ub-pnotes">{t.updateBatch.notes}</Label>
+                <Input id="ub-pnotes" placeholder={t.updateBatch.jarPh} value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
             </>
           )}
@@ -165,16 +167,16 @@ export function UpdateBatchDialog({
           {eventType === "SALE" && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="ub-price">Price (optional)</Label>
+                <Label htmlFor="ub-price">{t.updateBatch.price}</Label>
                 <Input id="ub-price" type="number" inputMode="decimal" min={0} step="0.01" placeholder="1200" value={price} onChange={(e) => setPrice(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ub-sowner">Buyer (optional)</Label>
-                <Input id="ub-sowner" placeholder="Buyer name" value={newOwner} onChange={(e) => setNewOwner(e.target.value)} />
+                <Label htmlFor="ub-sowner">{t.updateBatch.buyer}</Label>
+                <Input id="ub-sowner" placeholder={t.updateBatch.buyerPh} value={newOwner} onChange={(e) => setNewOwner(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ub-snotes">Notes (optional)</Label>
-                <Input id="ub-snotes" placeholder="Sale notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Label htmlFor="ub-snotes">{t.updateBatch.notes}</Label>
+                <Input id="ub-snotes" placeholder={t.updateBatch.saleNotesPh} value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
             </>
           )}
@@ -183,8 +185,8 @@ export function UpdateBatchDialog({
             <Alert variant="destructive"><AlertDescription>{submitError}</AlertDescription></Alert>
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Add Event"}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>{t.updateBatch.cancel}</Button>
+            <Button type="submit" disabled={saving}>{saving ? t.updateBatch.saving : t.updateBatch.addEvent}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

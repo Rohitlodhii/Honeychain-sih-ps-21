@@ -6,21 +6,7 @@ import type { LedgerBlock } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-const EVENT_META: Record<string, { label: string; icon: React.ElementType }> = {
-  HARVEST: { label: "Harvest", icon: Sprout },
-  QUALITY_TEST: { label: "Quality Test", icon: FlaskConical },
-  TRANSFER: { label: "Transfer", icon: Truck },
-  PACKAGE: { label: "Package", icon: Package },
-  SALE: { label: "Sale", icon: ShoppingCart },
-}
-
-function formatTs(ts?: string | null) {
-  if (!ts) return "—"
-  const d = new Date(ts)
-  if (isNaN(d.getTime())) return ts
-  return d.toLocaleString()
-}
+import { useI18n } from "@/lib/i18n/context"
 
 function payloadSummary(payload?: Record<string, any>): string | null {
   if (!payload || Object.keys(payload).length === 0) return null
@@ -36,13 +22,30 @@ function payloadSummary(payload?: Record<string, any>): string | null {
 
 export function BatchTimeline({ events }: { events: LedgerBlock[] }) {
   const [expanded, setExpanded] = React.useState<Record<number, boolean>>({})
+  const { t, tag } = useI18n()
+
+  const EVENT_META: Record<string, { label: string; icon: React.ElementType }> = {
+    HARVEST: { label: t.timeline.harvest, icon: Sprout },
+    QUALITY_TEST: { label: t.timeline.qualityTest, icon: FlaskConical },
+    TRANSFER: { label: t.timeline.transfer, icon: Truck },
+    PACKAGE: { label: t.timeline.package, icon: Package },
+    SALE: { label: t.timeline.sale, icon: ShoppingCart },
+  }
+
+  const formatTs = (ts?: string | null) => {
+    if (!ts) return "—"
+    const d = new Date(ts)
+    if (isNaN(d.getTime())) return ts
+    return d.toLocaleString(tag)
+  }
+
   const sorted = React.useMemo(
     () => [...(events ?? [])].sort((a, b) => a.index - b.index),
     [events]
   )
 
   if (!sorted.length) {
-    return <p className="text-sm text-muted-foreground">No traceability events yet.</p>
+    return <p className="text-sm text-muted-foreground">{t.timeline.empty}</p>
   }
 
   return (
@@ -60,7 +63,7 @@ export function BatchTimeline({ events }: { events: LedgerBlock[] }) {
             </span>
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="text-sm font-semibold capitalize">{meta.label}</h4>
-              <Badge variant="outline" className="text-[11px]">Event {block.index}</Badge>
+              <Badge variant="outline" className="text-[11px]">{t.timeline.eventPrefix} {block.index}</Badge>
               <span className="text-xs text-muted-foreground">{formatTs(block.timestamp_str)}</span>
             </div>
             {summary && <p className="mt-1 text-sm text-muted-foreground">{summary}</p>}
@@ -72,7 +75,7 @@ export function BatchTimeline({ events }: { events: LedgerBlock[] }) {
                   className="h-7 px-2 text-xs"
                   onClick={() => setExpanded((p) => ({ ...p, [block.index]: !p[block.index] }))}
                 >
-                  {isOpen ? "Hide" : "View"} traceability record
+                  {isOpen ? t.timeline.hideRecord : t.timeline.viewRecord} {t.timeline.recordSuffix}
                   <ChevronDown className={cn("ml-1 h-3 w-3 transition-transform", isOpen && "rotate-180")} />
                 </Button>
                 {isOpen && (
@@ -84,7 +87,7 @@ export function BatchTimeline({ events }: { events: LedgerBlock[] }) {
                       </div>
                     ))}
                     <details className="pt-1">
-                      <summary className="cursor-pointer font-medium">Ledger details (advanced)</summary>
+                      <summary className="cursor-pointer font-medium">{t.timeline.ledgerDetails}</summary>
                       <div className="mt-1 space-y-1 font-mono text-[11px] text-muted-foreground">
                         <div className="break-all">hash: {block.hash}</div>
                         <div className="break-all">prev: {block.prev_hash}</div>

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
+import { useI18n } from "@/lib/i18n/context"
 
 export function RecordReadingDialog({
   open,
@@ -39,6 +40,7 @@ export function RecordReadingDialog({
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [saving, setSaving] = React.useState(false)
+  const { t, locale } = useI18n()
 
   const reset = () => {
     setTemp("")
@@ -58,7 +60,7 @@ export function RecordReadingDialog({
       humidity,
       weight,
       sound,
-    })
+    }, locale)
     setErrors(errs)
     if (!payload) return
     setSaving(true)
@@ -69,7 +71,7 @@ export function RecordReadingDialog({
         if (!isNaN(d.getTime())) body.recorded_at = d.toISOString()
       }
       await api.hives.createReading(hiveId, body as any)
-      toast.success("Sensor reading recorded")
+      toast.success(t.recordReading.savedToast)
       reset()
       onOpenChange(false)
       onSuccess?.()
@@ -84,36 +86,36 @@ export function RecordReadingDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Record Sensor Reading{hiveName ? ` — ${hiveName}` : ""}</DialogTitle>
+          <DialogTitle>{t.recordReading.titlePrefix}{hiveName ? ` — ${hiveName}` : ""}</DialogTitle>
           <DialogDescription>
-            Enter the latest manual sensor measurements for this hive.
+            {t.recordReading.desc}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="rr-temp">Temperature (°C)</Label>
+              <Label htmlFor="rr-temp">{t.recordReading.temp}</Label>
               <Input id="rr-temp" type="number" inputMode="decimal" step="0.1" placeholder="34.5" value={temp} onChange={(e) => setTemp(e.target.value)} aria-invalid={Boolean(errors.temperature)} />
               {errors.temperature && <p className="text-xs text-destructive">{errors.temperature}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rr-hum">Humidity (%)</Label>
+              <Label htmlFor="rr-hum">{t.recordReading.hum}</Label>
               <Input id="rr-hum" type="number" inputMode="decimal" step="0.1" min={0} max={100} placeholder="58" value={humidity} onChange={(e) => setHumidity(e.target.value)} aria-invalid={Boolean(errors.humidity)} />
               {errors.humidity && <p className="text-xs text-destructive">{errors.humidity}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rr-weight">Weight (kg)</Label>
+              <Label htmlFor="rr-weight">{t.recordReading.weight}</Label>
               <Input id="rr-weight" type="number" inputMode="decimal" step="0.1" min={0} placeholder="25" value={weight} onChange={(e) => setWeight(e.target.value)} aria-invalid={Boolean(errors.weight)} />
               {errors.weight && <p className="text-xs text-destructive">{errors.weight}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rr-sound">Sound (Hz, optional)</Label>
+              <Label htmlFor="rr-sound">{t.recordReading.sound}</Label>
               <Input id="rr-sound" type="number" inputMode="decimal" step="1" min={0} placeholder="220" value={sound} onChange={(e) => setSound(e.target.value)} aria-invalid={Boolean(errors.sound)} />
               {errors.sound && <p className="text-xs text-destructive">{errors.sound}</p>}
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rr-at">Recorded at (optional)</Label>
+            <Label htmlFor="rr-at">{t.recordReading.recordedAt}</Label>
             <Input id="rr-at" type="datetime-local" value={recordedAt} onChange={(e) => setRecordedAt(e.target.value)} />
           </div>
           {submitError && (
@@ -123,10 +125,10 @@ export function RecordReadingDialog({
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-              Cancel
+              {t.recordReading.cancel}
             </Button>
             <Button type="submit" disabled={saving || !hiveId}>
-              {saving ? "Saving…" : "Save Reading"}
+              {saving ? t.recordReading.saving : t.recordReading.save}
             </Button>
           </DialogFooter>
         </form>

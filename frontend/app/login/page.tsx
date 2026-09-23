@@ -12,12 +12,15 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { useI18n } from '@/lib/i18n/context'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 const SIMPLE_INPUT_CLASS =
   'shadow-none outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input active:outline-none'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useI18n()
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -40,14 +43,14 @@ export default function LoginPage() {
     // (Read via window.location to avoid a Suspense boundary for useSearchParams.)
     try {
       if (typeof window !== 'undefined' && window.location.search.includes('registered=1')) {
-        const message = 'Account created! Sign in with your phone number and password.'
+        const message = t.login.accountCreated
         setNotice(message)
         toast.success(message)
       }
     } catch {
       // ignore
     }
-  }, [router])
+  }, [router, t])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,10 +65,10 @@ export default function LoginPage() {
       const response = await authAPI.login(phone, password)
       localStorage.setItem('token', response.data.access_token)
       const role = response.data?.user?.role
-      toast.success('Signed in successfully!')
+      toast.success(t.login.signedInOk)
       router.push(role === 'cooperative_admin' ? '/admin' : '/dashboard')
     } catch (err: any) {
-      const message = err.response?.data?.detail || 'Login failed. Check your credentials.'
+      const message = err.response?.data?.detail || t.login.loginFailed
       setError(message)
       toast.error(message)
     } finally {
@@ -78,19 +81,15 @@ export default function LoginPage() {
       <Card className="w-full max-w-4xl overflow-hidden p-0 grid grid-cols-1 md:grid-cols-2">
         {/* Left — form side */}
         <div className="flex min-h-[480px] flex-col p-6 sm:p-8 md:min-h-[560px]">
-          {/* Top row: brand */}
-          <div className="flex items-start justify-between">
-            <span className="text-lg font-semibold tracking-tight">
-              beelink
-            </span>
+          <div className="flex items-start justify-end">
+            <LanguageSwitcher />
           </div>
-
           {/* Heading */}
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Welcome back
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            {t.login.title}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in with your phone number and password
+            {t.login.subtitle}
           </p>
 
           {/* Fields — just below the subtitle, empty space left in the middle */}
@@ -123,13 +122,13 @@ export default function LoginPage() {
                 className="space-y-4"
               >
                 <div className="space-y-4">
-                  <Label htmlFor="login-phone">Mobile number</Label>
+                  <Label htmlFor="login-phone">{t.login.mobile}</Label>
                   <Input
                     id="login-phone"
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel"
-                    placeholder="+91 XXXXX XXXXX"
+                    placeholder={t.login.mobilePh}
                     value={phone}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setPhone(e.target.value)
@@ -139,12 +138,12 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="space-y-4">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password">{t.login.password}</Label>
                   <Input
                     id="login-password"
                     type="password"
                     autoComplete="current-password"
-                    placeholder="Enter your password"
+                    placeholder={t.login.passwordPh}
                     value={password}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setPassword(e.target.value)
@@ -165,19 +164,19 @@ export default function LoginPage() {
               className="w-full"
               disabled={loading}
             >
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? t.login.signingIn : t.login.signIn}
             </Button>
           </div>
 
           <Separator className="my-4" />
 
           <p className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
+            {t.login.noAccount}{' '}
             <Link
               href="/register"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Create account
+              {t.login.createAccount}
             </Link>
           </p>
         </div>
@@ -186,7 +185,7 @@ export default function LoginPage() {
         <div className="relative hidden min-h-[560px] md:block">
           <Image
             src="/images/login.png"
-            alt="Beekeeper holding a honeycomb"
+            alt={t.login.imgAlt}
             fill
             priority
             className="object-cover"

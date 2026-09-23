@@ -10,7 +10,12 @@
  * but every submit path parses to a `number` and validates BEFORE calling the API.
  * This guarantees the JSON body always carries the type the backend declared
  * (number vs string vs null) and never NaN / '' / undefined.
+ *
+ * All validators accept a `locale` ('en' | 'hi' | 'mr') so error messages are
+ * localised via lib/i18n/dictionaries. Callers pass the locale from useI18n().
  */
+
+import { dictionaries, type Locale } from './i18n/dictionaries'
 
 // ---------------------------------------------------------------------------
 // Payload types — field-for-field compatible with backend Pydantic schemas
@@ -124,11 +129,13 @@ export function validateRequiredText(
   raw: string,
   fieldLabel: string,
   maxLength: number,
+  locale: Locale = 'en',
 ): string | null {
+  const v = dictionaries[locale].validation
   const value = cleanText(raw)
-  if (value.length === 0) return `${fieldLabel} is required`
+  if (value.length === 0) return v.required(fieldLabel)
   if (value.length > maxLength)
-    return `${fieldLabel} must be ≤ ${maxLength} characters`
+    return v.maxChars(fieldLabel, maxLength)
   return null
 }
 
@@ -136,15 +143,17 @@ export function validateRequiredNumber(
   raw: string,
   fieldLabel: string,
   opts: { min?: number; max?: number; minExclusive?: number },
+  locale: Locale = 'en',
 ): string | null {
+  const v = dictionaries[locale].validation
   const value = parseNumberInput(raw)
-  if (value === null) return `${fieldLabel} must be a number`
+  if (value === null) return v.mustBeNumber(fieldLabel)
   if (opts.min !== undefined && value < opts.min)
-    return `${fieldLabel} must be ≥ ${opts.min}`
+    return v.minVal(fieldLabel, opts.min)
   if (opts.max !== undefined && value > opts.max)
-    return `${fieldLabel} must be ≤ ${opts.max}`
+    return v.maxVal(fieldLabel, opts.max)
   if (opts.minExclusive !== undefined && value <= opts.minExclusive)
-    return `${fieldLabel} must be greater than ${opts.minExclusive}`
+    return v.greaterThan(fieldLabel, opts.minExclusive)
   return null
 }
 
@@ -152,9 +161,10 @@ export function validateOptionalNumber(
   raw: string,
   fieldLabel: string,
   opts: { min?: number; max?: number },
+  locale: Locale = 'en',
 ): string | null {
   if (raw.trim() === '') return null // empty = omitted (sent as null/omitted)
-  return validateRequiredNumber(raw, fieldLabel, opts)
+  return validateRequiredNumber(raw, fieldLabel, opts, locale)
 }
 
 // ---------------------------------------------------------------------------
@@ -167,25 +177,28 @@ export function validateHiveForm(input: {
   name: string
   location: string
   species: string
-}): {
+}, locale: Locale = 'en'): {
   errors: FormErrors<'name' | 'location' | 'species'>
   payload: HiveCreatePayload | null
 } {
+  const v = dictionaries[locale].validation
   const errors: FormErrors<'name' | 'location' | 'species'> = {}
   const nameErr = validateRequiredText(
     input.name,
-    'Hive name',
+    v.hiveName,
     FIELD_LIMITS.hiveName.maxLength,
+    locale,
   )
   if (nameErr) errors.name = nameErr
   const locErr = validateRequiredText(
     input.location,
-    'Location',
+    v.location,
     FIELD_LIMITS.hiveLocation.maxLength,
+    locale,
   )
   if (locErr) errors.location = locErr
   if (!isHiveSpecies(input.species))
-    errors.species = 'Species must be a supported bee species'
+    errors.species = v.speciesErr
 
   if (Object.keys(errors).length > 0) return { errors, payload: null }
   return {
@@ -203,31 +216,32 @@ export function validateReadingForm(input: {
   humidity: string
   weight: string
   sound: string
-}): {
+}, locale: Locale = 'en'): {
   errors: FormErrors<'temperature' | 'humidity' | 'weight' | 'sound'>
   payload: SensorReadingPayload | null
 } {
+  const v = dictionaries[locale].validation
   const errors: FormErrors<'temperature' | 'humidity' | 'weight' | 'sound'> =
     {}
-  const tErr = validateRequiredNumber(input.temperature, 'Temperature (°C)', {
+  const tErr = validateRequiredNumber(input.temperature, v.temperature, {
     min: FIELD_LIMITS.temperatureC.min,
     max: FIELD_LIMITS.temperatureC.max,
-  })
+  }, locale)
   if (tErr) errors.temperature = tErr
-  const hErr = validateRequiredNumber(input.humidity, 'Humidity (%)', {
+  const hErr = validateRequiredNumber(input.humidity, v.humidity, {
     min: FIELD_LIMITS.humidityPct.min,
     max: FIELD_LIMITS.humidityPct.max,
-  })
+  }, locale)
   if (hErr) errors.humidity = hErr
-  const wErr = validateRequiredNumber(input.weight, 'Weight (kg)', {
+  const wErr = validateRequiredNumber(input.weight, v.weight, {
     min: FIELD_LIMITS.weightKg.min,
     max: FIELD_LIMITS.weightKg.max,
-  })
+  }, locale)
   if (wErr) errors.weight = wErr
-  const sErr = validateOptionalNumber(input.sound, 'Sound (Hz)', {
+  const sErr = validateOptionalNumber(input.sound, v.sound, {
     min: FIELD_LIMITS.soundHz.min,
     max: FIELD_LIMITS.soundHz.max,
-  })
+  }, locale)
   if (sErr) errors.sound = sErr
 
   if (Object.keys(errors).length > 0) return { errors, payload: null }
@@ -251,44 +265,47 @@ export function validateBatchForm(input: {
   location: string
   moisture: string
   ownedHiveIds: readonly string[]
-}): {
+}, locale: Locale = 'en'): {
   errors: FormErrors<'hiveId' | 'honeyType' | 'quantity' | 'location' | 'moisture'>
   payload: BatchCreatePayload | null
 } {
+  const v = dictionaries[locale].validation
   const errors: FormErrors<
     'hiveId' | 'honeyType' | 'quantity' | 'location' | 'moisture'
   > = {}
   const hiveId = input.hiveId.trim()
   if (hiveId === '') {
-    errors.hiveId = 'Select a hive to harvest from'
+    errors.hiveId = v.selectHive
   } else if (
     input.ownedHiveIds.length > 0 &&
     !input.ownedHiveIds.includes(hiveId)
   ) {
-    errors.hiveId = 'Selected hive is not in your apiary'
+    errors.hiveId = v.hiveNotYours
   }
   const typeErr = validateRequiredText(
     input.honeyType,
-    'Honey type',
+    v.honeyType,
     FIELD_LIMITS.honeyType.maxLength,
+    locale,
   )
   if (typeErr) errors.honeyType = typeErr
   // Mirrors main.py: "quantity_kg must be greater than 0"
-  const qtyErr = validateRequiredNumber(input.quantity, 'Quantity (kg)', {
+  const qtyErr = validateRequiredNumber(input.quantity, v.quantity, {
     minExclusive: FIELD_LIMITS.quantityKg.minExclusive,
     max: FIELD_LIMITS.quantityKg.max,
-  })
+  }, locale)
   if (qtyErr) errors.quantity = qtyErr
   const locErr = validateRequiredText(
     input.location,
-    'Apiary location',
+    v.apiaryLocation,
     FIELD_LIMITS.apiaryLocation.maxLength,
+    locale,
   )
   if (locErr) errors.location = locErr
-  const moistErr = validateRequiredNumber(input.moisture, 'Moisture (%)', {
+  const moistErr = validateRequiredNumber(input.moisture, v.moisture, {
     min: FIELD_LIMITS.moisturePct.min,
     max: FIELD_LIMITS.moisturePct.max,
-  })
+  }, locale)
   if (moistErr) errors.moisture = moistErr
 
   if (Object.keys(errors).length > 0) return { errors, payload: null }

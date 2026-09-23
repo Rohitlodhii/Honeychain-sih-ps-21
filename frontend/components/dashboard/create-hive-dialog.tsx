@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
+import { useI18n } from "@/lib/i18n/context"
 
 const SPECIES_LABEL: Record<string, string> = {
   apis_mellifera: "Apis Mellifera",
@@ -50,6 +51,7 @@ export function CreateHiveDialog({
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [saving, setSaving] = React.useState(false)
+  const { t, locale } = useI18n()
 
   const reset = () => {
     setName("")
@@ -64,18 +66,18 @@ export function CreateHiveDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
-    const { errors: errs, payload } = validateHiveForm({ name, location, species })
+    const { errors: errs, payload } = validateHiveForm({ name, location, species }, locale)
     const nextErrors: Record<string, string> = { ...errs }
     let lat: number | null | undefined = undefined
     let lng: number | null | undefined = undefined
     if (latitude.trim() !== "") {
       const v = Number(latitude.trim())
-      if (!Number.isFinite(v) || v < -90 || v > 90) nextErrors.latitude = "Latitude must be between -90 and 90"
+      if (!Number.isFinite(v) || v < -90 || v > 90) nextErrors.latitude = t.createHive.latErr
       else lat = v
     }
     if (longitude.trim() !== "") {
       const v = Number(longitude.trim())
-      if (!Number.isFinite(v) || v < -180 || v > 180) nextErrors.longitude = "Longitude must be between -180 and 180"
+      if (!Number.isFinite(v) || v < -180 || v > 180) nextErrors.longitude = t.createHive.lngErr
       else lng = v
     }
     setErrors(nextErrors)
@@ -87,7 +89,7 @@ export function CreateHiveDialog({
         ...(lat !== undefined ? { latitude: lat } : {}),
         ...(lng !== undefined ? { longitude: lng } : {}),
       })
-      toast.success(`Hive "${res.data.name}" added`)
+      toast.success(t.createHive.addedToast(res.data.name))
       reset()
       onOpenChange(false)
       onCreated?.(res.data)
@@ -102,22 +104,22 @@ export function CreateHiveDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Hive</DialogTitle>
-          <DialogDescription>Register a new hive in your apiary to start monitoring.</DialogDescription>
+          <DialogTitle>{t.createHive.title}</DialogTitle>
+          <DialogDescription>{t.createHive.desc}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-2">
-            <Label htmlFor="ch-name">Hive Name</Label>
-            <Input id="ch-name" placeholder="Hive 1" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={Boolean(errors.name)} />
+            <Label htmlFor="ch-name">{t.createHive.name}</Label>
+            <Input id="ch-name" placeholder={t.createHive.namePh} value={name} onChange={(e) => setName(e.target.value)} aria-invalid={Boolean(errors.name)} />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ch-loc">Location</Label>
-            <Input id="ch-loc" placeholder="North apiary" value={location} onChange={(e) => setLocation(e.target.value)} aria-invalid={Boolean(errors.location)} />
+            <Label htmlFor="ch-loc">{t.createHive.location}</Label>
+            <Input id="ch-loc" placeholder={t.createHive.locationPh} value={location} onChange={(e) => setLocation(e.target.value)} aria-invalid={Boolean(errors.location)} />
             {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
           </div>
           <div className="space-y-2">
-            <Label>Species</Label>
+            <Label>{t.createHive.species}</Label>
             <Select value={species} onValueChange={(v) => { if (isHiveSpecies(v)) setSpecies(v) }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -130,13 +132,13 @@ export function CreateHiveDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="ch-lat">Latitude (optional)</Label>
-              <Input id="ch-lat" type="number" inputMode="decimal" step="any" placeholder="26.14" value={latitude} onChange={(e) => setLatitude(e.target.value)} />
+              <Label htmlFor="ch-lat">{t.createHive.lat}</Label>
+              <Input id="ch-lat" type="number" inputMode="decimal" step="any" placeholder={t.createHive.latPh} value={latitude} onChange={(e) => setLatitude(e.target.value)} />
               {errors.latitude && <p className="text-xs text-destructive">{errors.latitude}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ch-lng">Longitude (optional)</Label>
-              <Input id="ch-lng" type="number" inputMode="decimal" step="any" placeholder="85.36" value={longitude} onChange={(e) => setLongitude(e.target.value)} />
+              <Label htmlFor="ch-lng">{t.createHive.lng}</Label>
+              <Input id="ch-lng" type="number" inputMode="decimal" step="any" placeholder={t.createHive.lngPh} value={longitude} onChange={(e) => setLongitude(e.target.value)} />
               {errors.longitude && <p className="text-xs text-destructive">{errors.longitude}</p>}
             </div>
           </div>
@@ -144,8 +146,8 @@ export function CreateHiveDialog({
             <Alert variant="destructive"><AlertDescription>{submitError}</AlertDescription></Alert>
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Adding…" : "Add Hive"}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>{t.createHive.cancel}</Button>
+            <Button type="submit" disabled={saving}>{saving ? t.createHive.adding : t.createHive.add}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
