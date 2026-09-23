@@ -1,619 +1,384 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { authAPI, hiveAPI, batchAPI } from '@/lib/api'
+import * as React from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { api } from "@/lib/api"
+import { normalizeError } from "@/lib/api/client"
+import type { Batch, Hive, HiveHealthResponse } from "@/lib/api/types"
+import { useAuth } from "@/components/dashboard/auth-provider"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
-  APIARY_HINTS,
-  FIELD_LIMITS,
-  HIVE_SPECIES_OPTIONS,
-  isHiveSpecies,
-  validateBatchForm,
-  validateHiveForm,
-  validateReadingForm,
-  type FormErrors,
-  type HiveSpecies,
-} from '@/lib/farmer-forms'
-import Link from 'next/link'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { HealthBadge } from "@/components/dashboard/status-badges"
+import { RecordReadingDialog } from "@/components/dashboard/record-reading-dialog"
+import { CreateBatchDialog } from "@/components/dashboard/create-batch-dialog"
+import { CreateHiveDialog } from "@/components/dashboard/create-hive-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { AlertTriangle, Hexagon, Package, Plus } from "lucide-react"
+import { HarvestCalendar } from "@/components/dashboard/harvest-calendar"
 
-interface Hive {
-  id: string
-  name: string
-  location: string
-  species: string
+interface HiveWithHealth {
+  hive: Hive
+  health?: HiveHealthResponse | null
+  healthError?: string | null
 }
 
-interface HealthStatus {
-  status: 'HEALTHY' | 'WATCH' | 'HIGH_RISK'
-  confidence: number
-  reasons: string[]
-}
-
-// NOTE: React auto-escapes all interpolated strings, so no manual
-// escapeHtml() is needed. (A manual div.innerHTML escape + JSX render
-// would double-escape and show entities like &amp;lt; to users.)
-
-interface Batch {
-  id: string
-  hive_id: string
-  honey_type: string
-  quantity_kg: number
-  status: string
-  purity_score?: number
-}
-
-export default function Dashboard() {
+export default function OverviewPage() {
+  const { user } = useAuth()
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [hives, setHives] = useState<Hive[]>([])
-  const [batches, setBatches] = useState<Batch[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showNewHive, setShowNewHive] = useState(false)
-  const [showNewBatch, setShowNewBatch] = useState(false)
-  const [selectedHive, setSelectedHive] = useState<string>('')
-  const [hiveHealth, setHiveHealth] = useState<Record<string, HealthStatus>>({})
+  const [hives, setHives] = React.useState<Hive[]>([])
+  const [batches, setBatches] = React.useState<Batch[]>([])
+  const [batchesLoading, setBatchesLoading] = React.useState(true)
+  const [healthMap, setHealthMap] = React.useState<Record<string, HiveHealthResponse | null>>({})
+  const [healthErrors, setHealthErrors] = React.useState<Record<string, string>>({})
+  const [loading, setLoading] = React.useState(true)
+  const [healthLoading, setHealthLoading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
-  // Form states — raw strings for controlled inputs; parsed + validated
-  // into typed payloads (lib/farmer-forms) before any API call so the JSON
-  // body always matches backend/app/schemas.py (number vs string vs null).
-  const [newHiveName, setNewHiveName] = useState('')
-  const [newHiveLocation, setNewHiveLocation] = useState('')
-  const [newHiveSpecies, setNewHiveSpecies] = useState<HiveSpecies>('apis_mellifera')
-  const [hiveErrors, setHiveErrors] = useState<FormErrors<'name' | 'location' | 'species'>>({})
+  const [recordOpen, setRecordOpen] = React.useState(false)
+  const [recordHiveId, setRecordHiveId] = React.useState("")
+  const [batchOpen, setBatchOpen] = React.useState(false)
+  const [hiveOpen, setHiveOpen] = React.useState(false)
 
-  const [newBatchHive, setNewBatchHive] = useState('')
-  const [newBatchType, setNewBatchType] = useState('')
-  const [newBatchQty, setNewBatchQty] = useState('')
-  const [newBatchLocation, setNewBatchLocation] = useState('')
-  const [newBatchMoisture, setNewBatchMoisture] = useState('')
-  const [batchErrors, setBatchErrors] = useState<FormErrors<'hiveId' | 'honeyType' | 'quantity' | 'location' | 'moisture'>>({})
-  const [batchSubmitError, setBatchSubmitError] = useState<string | null>(null)
-
-  const [readingTemp, setReadingTemp] = useState('')
-  const [readingHumidity, setReadingHumidity] = useState('')
-  const [readingWeight, setReadingWeight] = useState('')
-  const [readingSound, setReadingSound] = useState('')
-  const [readingErrors, setReadingErrors] = useState<FormErrors<'temperature' | 'humidity' | 'weight' | 'sound'>>({})
-  const [readingSubmitError, setReadingSubmitError] = useState<string | null>(null)
-
-  // Load data
-  useEffect(() => {
-    const loadData = async () => {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        router.push('/login')
-        return
-      }
-
-      try {
-        const meResponse = await authAPI.me()
-        setUser(meResponse.data)
-
-        const hivesResponse = await hiveAPI.list()
-        setHives(hivesResponse.data)
-        setSelectedHive(hivesResponse.data[0]?.id || '')
-
-        const batchesResponse = await batchAPI.list()
-        setBatches(batchesResponse.data)
-      } catch (err) {
-        console.error('Failed to load data', err)
-        localStorage.removeItem('token')
-        router.push('/login')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [router])
-
-  // Load health for selected hive
-  useEffect(() => {
-    if (!selectedHive) return
-
-    const loadHealth = async () => {
-      try {
-        const response = await hiveAPI.getHealth(selectedHive)
-        setHiveHealth((prev) => ({
-          ...prev,
-          [selectedHive]: response.data.health,
-        }))
-      } catch (err) {
-        console.error('Failed to load health', err)
-      }
-    }
-
-    loadHealth()
-  }, [selectedHive])
-
-  // Default the batch hive picker to the currently selected hive so the
-  // required hive_id always resolves to a hive the user owns.
-  useEffect(() => {
-    if (selectedHive && !newBatchHive) setNewBatchHive(selectedHive)
-  }, [selectedHive, newBatchHive])
-
-  const handleCreateHive = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const { errors, payload } = validateHiveForm({
-      name: newHiveName,
-      location: newHiveLocation,
-      species: newHiveSpecies,
-    })
-    setHiveErrors(errors)
-    if (!payload) return
+  const loadAll = React.useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
-      const response = await hiveAPI.create(payload)
-      setHives([...hives, response.data])
-      setNewHiveName('')
-      setNewHiveLocation('')
-      setNewHiveSpecies('apis_mellifera')
-      setHiveErrors({})
-      setShowNewHive(false)
+      const [hivesRes, batchesRes] = await Promise.all([
+        api.hives.list(),
+        api.batches.list().catch(() => ({ data: [] as Batch[] })),
+      ])
+      setHives(hivesRes.data)
+      setBatches((batchesRes.data as Batch[]) ?? [])
+      if (hivesRes.data.length > 0 && !recordHiveId) setRecordHiveId(hivesRes.data[0].id)
     } catch (err) {
-      console.error('Failed to create hive', err)
+      setError(normalizeError(err).detail)
+    } finally {
+      setLoading(false)
+      setBatchesLoading(false)
     }
-  }
+  }, [recordHiveId])
 
-  const handleCreateBatch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setBatchSubmitError(null)
-    // Fall back to the selected hive when the picker was never touched.
-    const hiveId = (newBatchHive || selectedHive || '').trim()
-    const { errors, payload } = validateBatchForm({
-      hiveId,
-      honeyType: newBatchType,
-      quantity: newBatchQty,
-      location: newBatchLocation,
-      moisture: newBatchMoisture,
-      ownedHiveIds: hives.map((h) => h.id),
-    })
-    setBatchErrors(errors)
-    if (!payload) {
-      if (errors.hiveId && !hiveId) alert('Create/select a hive first before harvesting a batch.')
-      return
-    }
-    try {
-      const response = await batchAPI.create(payload)
-      // Backend returns {id/batch_id, hive_id, ...}; normalize to Batch shape
-      // so the list filter (b.hive_id === selectedHive) keeps working.
-      const created = response.data
-      const newBatch: Batch = {
-        id: created.id || created.batch_id,
-        hive_id: created.hive_id || hiveId,
-        honey_type: created.honey_type || payload.honey_type,
-        quantity_kg: created.quantity_kg ?? payload.quantity_kg,
-        status: created.status,
-        purity_score: created.purity_score,
-      }
-      setBatches([...batches, newBatch])
-      setNewBatchHive('')
-      setNewBatchType('')
-      setNewBatchQty('')
-      setNewBatchLocation('')
-      setNewBatchMoisture('')
-      setBatchErrors({})
-      setShowNewBatch(false)
-
-      console.log('Batch created:', `Batch created! QR code generated. Batch ID: ${response.data.batch_id}`)
-      alert(`Batch created! QR code generated. Batch ID: ${response.data.batch_id}`)
-    } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: unknown } }; message?: string })?.response?.data?.detail
-        ?? (err as Error)?.message ?? 'Unknown error'
-      console.error('Failed to create batch', err)
-      const message = typeof detail === 'string' ? detail : JSON.stringify(detail)
-      setBatchSubmitError(message)
-      alert(`Failed to create batch: ${message}`)
-    }
-  }
-
-  const handleCreateReading = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedHive) return
-    setReadingSubmitError(null)
-    const { errors, payload } = validateReadingForm({
-      temperature: readingTemp,
-      humidity: readingHumidity,
-      weight: readingWeight,
-      sound: readingSound,
-    })
-    setReadingErrors(errors)
-    if (!payload) return
-    try {
-      await hiveAPI.createReading(selectedHive, payload)
-      const response = await hiveAPI.getHealth(selectedHive)
-      setHiveHealth((prev) => ({
-        ...prev,
-        [selectedHive]: response.data.health,
-      }))
-      setReadingTemp(''); setReadingHumidity(''); setReadingWeight(''); setReadingSound('')
-      setReadingErrors({})
-    } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: unknown } }; message?: string })?.response?.data?.detail
-        ?? (err as Error)?.message ?? 'Unknown error'
-      console.error('Failed to record reading', err)
-      setReadingSubmitError(typeof detail === 'string' ? detail : JSON.stringify(detail))
-    }
-  }
-
-  const downloadComplianceReport = async (batchId: string) => {
-    try {
-      const response = await batchAPI.complianceReport(batchId)
-      const url = URL.createObjectURL(response.data)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `honeychain-${batchId}-compliance.pdf`
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (err) {
-      console.error('Failed to download compliance report', err)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-espresso flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl text-honey mb-4">🐝</div>
-          <p className="text-cream">Loading HoneyChain Dashboard...</p>
-        </div>
-      </div>
+  const loadHealth = React.useCallback(async (list: Hive[]) => {
+    if (list.length === 0) return
+    setHealthLoading(true)
+    const results = await Promise.all(
+      list.map(async (h) => {
+        try {
+          const r = await api.hives.health(h.id)
+          return { id: h.id, data: r.data as HiveHealthResponse, error: null as string | null }
+        } catch (err) {
+          return { id: h.id, data: null, error: normalizeError(err).detail }
+        }
+      })
     )
-  }
+    const map: Record<string, HiveHealthResponse | null> = {}
+    const errs: Record<string, string> = {}
+    results.forEach((r) => {
+      map[r.id] = r.data
+      if (r.error && r.data === null) {
+        // Only keep meaningful errors; "No sensor readings" is an empty state
+        errs[r.id] = r.error
+      }
+    })
+    setHealthMap(map)
+    setHealthErrors(errs)
+    setHealthLoading(false)
+  }, [])
 
-  if (!user) {
-    return null
-  }
+  React.useEffect(() => {
+    loadAll()
+  }, [loadAll])
 
-  const currentHealth = selectedHive ? hiveHealth[selectedHive] : null
-  const userBatches = batches.filter((b) => b.hive_id === selectedHive)
+  React.useEffect(() => {
+    if (hives.length > 0) loadHealth(hives)
+  }, [hives, loadHealth])
+
+  const refresh = React.useCallback(async () => {
+    try {
+      const [hivesRes, batchesRes] = await Promise.all([
+        api.hives.list(),
+        api.batches.list().catch(() => ({ data: [] as Batch[] })),
+      ])
+      setHives(hivesRes.data)
+      setBatches((batchesRes.data as Batch[]) ?? [])
+      await loadHealth(hivesRes.data)
+    } catch {
+      /* ignore */
+    } finally {
+      setBatchesLoading(false)
+    }
+  }, [loadHealth])
+
+  const counts = React.useMemo(() => {
+    let healthy = 0
+    let watch = 0
+    let high = 0
+    Object.values(healthMap).forEach((h) => {
+      if (!h) return
+      if (h.health.status === "HEALTHY") healthy += 1
+      else if (h.health.status === "WATCH") watch += 1
+      else if (h.health.status === "HIGH_RISK") high += 1
+    })
+    return { healthy, watch, high }
+  }, [healthMap])
+
+  const rows: HiveWithHealth[] = hives.map((h) => ({
+    hive: h,
+    health: healthMap[h.id] ?? null,
+    healthError: healthErrors[h.id] ?? null,
+  }))
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-espresso via-surface to-espresso">
+    <div className="space-y-6">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-espresso/95 backdrop-blur border-b border-honey/20">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-serif font-bold text-honey">{user.name}&apos;s Hives</h1>
-            <p className="text-sm text-cream/60">{user.cluster || 'No cluster assigned'}</p>
-          </div>
-
-          <div className="flex gap-3">
-            {user.role === 'cooperative_admin' && (
-              <Link href="/admin" className="btn-secondary">
-                Admin Dashboard
-              </Link>
-            )}
-            <button
-              onClick={() => {
-                localStorage.removeItem('token')
-                router.push('/')
-              }}
-              className="btn-ghost"
-            >
-              Logout
-            </button>
-          </div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Welcome back, {user?.name ?? "Beekeeper"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Monitor your apiaries, honey production and traceability from one place.
+          </p>
         </div>
-      </header>
+      <HarvestCalendar batches={batches} loading={loading || batchesLoading} />
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Sidebar: Hives List */}
-          <div className="lg:col-span-1">
-            <div className="card">
-              <h2 className="text-lg font-serif font-bold text-honey mb-4">My Hives</h2>
-
-              <div className="space-y-2 mb-4">
-                {hives.map((hive) => (
-                  <button
-                    key={hive.id}
-                    onClick={() => setSelectedHive(hive.id)}
-                    className={`w-full text-left p-3 rounded transition-colors ${
-                      selectedHive === hive.id
-                        ? 'bg-honey/20 border-l-4 border-honey'
-                        : 'hover:bg-surface/50'
-                    }`}
-                  >
-                    <div className="font-semibold text-cream">{hive.name}</div>
-                    <div className="text-xs text-cream/60">{hive.location}</div>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setShowNewHive(!showNewHive)}
-                className="btn-secondary w-full text-sm"
-              >
-                {showNewHive ? 'Cancel' : '+ Add Hive'}
-              </button>
-
-              {showNewHive && (
-                <form onSubmit={handleCreateHive} className="mt-4 pt-4 border-t border-honey/20 space-y-3" noValidate>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Hive name"
-                      value={newHiveName}
-                      onChange={(e) => setNewHiveName(e.target.value)}
-                      className="input-field text-sm"
-                      required
-                      minLength={FIELD_LIMITS.hiveName.minLength}
-                      maxLength={FIELD_LIMITS.hiveName.maxLength}
-                      autoComplete="off"
-                      aria-invalid={Boolean(hiveErrors.name)}
-                    />
-                    {hiveErrors.name && <p className="mt-1 text-xs text-red-400">{hiveErrors.name}</p>}
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Location"
-                      value={newHiveLocation}
-                      onChange={(e) => setNewHiveLocation(e.target.value)}
-                      className="input-field text-sm"
-                      required
-                      minLength={FIELD_LIMITS.hiveLocation.minLength}
-                      maxLength={FIELD_LIMITS.hiveLocation.maxLength}
-                      autoComplete="off"
-                      aria-invalid={Boolean(hiveErrors.location)}
-                    />
-                    {hiveErrors.location && <p className="mt-1 text-xs text-red-400">{hiveErrors.location}</p>}
-                  </div>
-                  <div>
-                    <select
-                      value={newHiveSpecies}
-                      onChange={(e) => {
-                        const next = e.target.value
-                        if (isHiveSpecies(next)) setNewHiveSpecies(next)
-                      }}
-                      className="input-field text-sm"
-                      required
-                      aria-invalid={Boolean(hiveErrors.species)}
-                    >
-                      {HIVE_SPECIES_OPTIONS.map((species) => (
-                        <option key={species} value={species}>
-                          {species === 'apis_mellifera' ? 'Apis Mellifera'
-                            : species === 'apis_cerana' ? 'Apis Cerana'
-                            : species === 'apis_dorsata' ? 'Apis Dorsata'
-                            : 'Apis Florea'}
-                        </option>
-                      ))}
-                    </select>
-                    {hiveErrors.species && <p className="mt-1 text-xs text-red-400">{hiveErrors.species}</p>}
-                  </div>
-                  <button type="submit" className="btn-primary w-full text-sm">
-                    Create Hive
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-
-          {/* Main: Health & Batches */}
-          <div className="lg:col-span-3 space-y-6">
-            {selectedHive ? (
-              <>
-                {/* Health Status Card */}
-                {currentHealth && (
-                  <div className="card">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h2 className="text-2xl font-serif font-bold text-honey">Hive Health</h2>
-                        <div className={`mt-2 ${
-                          currentHealth.status === 'HEALTHY'
-                            ? 'badge-healthy'
-                            : currentHealth.status === 'WATCH'
-                            ? 'badge-watch'
-                            : 'badge-risk'
-                        }`}>
-                          {currentHealth.status}
-                        </div>
-                      </div>
-                      <div className="text-sm text-cream/60">
-                        Confidence: {(currentHealth.confidence * 100).toFixed(0)}%
-                      </div>
-                    </div>
-
-                    <div className="mt-4 space-y-2">
-                      {currentHealth.reasons.map((reason, idx) => (
-                        <p key={idx} className="text-sm text-cream/80">
-                          {reason}
-                        </p>
-                      ))}
-                    </div>
-
-                    <form onSubmit={handleCreateReading} className="mt-4 space-y-2" noValidate>
-                      <div className="grid sm:grid-cols-5 gap-2">
-                        <div>
-                          <input className="input-field text-sm" type="number" inputMode="decimal" step={FIELD_LIMITS.temperatureC.step} min={FIELD_LIMITS.temperatureC.min} max={FIELD_LIMITS.temperatureC.max} placeholder="Temp °C" title={APIARY_HINTS.temperatureC} value={readingTemp} onChange={(e) => setReadingTemp(e.target.value)} required aria-invalid={Boolean(readingErrors.temperature)} />
-                          {readingErrors.temperature && <p className="mt-1 text-xs text-red-400">{readingErrors.temperature}</p>}
-                        </div>
-                        <div>
-                          <input className="input-field text-sm" type="number" inputMode="decimal" step={FIELD_LIMITS.humidityPct.step} min={FIELD_LIMITS.humidityPct.min} max={FIELD_LIMITS.humidityPct.max} placeholder="Humidity %" title={APIARY_HINTS.humidityPct} value={readingHumidity} onChange={(e) => setReadingHumidity(e.target.value)} required aria-invalid={Boolean(readingErrors.humidity)} />
-                          {readingErrors.humidity && <p className="mt-1 text-xs text-red-400">{readingErrors.humidity}</p>}
-                        </div>
-                        <div>
-                          <input className="input-field text-sm" type="number" inputMode="decimal" step={FIELD_LIMITS.weightKg.step} min={FIELD_LIMITS.weightKg.min} max={FIELD_LIMITS.weightKg.max} placeholder="Weight kg" title={APIARY_HINTS.weightKg} value={readingWeight} onChange={(e) => setReadingWeight(e.target.value)} required aria-invalid={Boolean(readingErrors.weight)} />
-                          {readingErrors.weight && <p className="mt-1 text-xs text-red-400">{readingErrors.weight}</p>}
-                        </div>
-                        <div>
-                          <input className="input-field text-sm" type="number" inputMode="decimal" step={FIELD_LIMITS.soundHz.step} min={FIELD_LIMITS.soundHz.min} max={FIELD_LIMITS.soundHz.max} placeholder="Sound Hz (optional)" title={APIARY_HINTS.soundHz} value={readingSound} onChange={(e) => setReadingSound(e.target.value)} aria-invalid={Boolean(readingErrors.sound)} />
-                          {readingErrors.sound && <p className="mt-1 text-xs text-red-400">{readingErrors.sound}</p>}
-                        </div>
-                        <button type="submit" className="btn-secondary text-sm">Record reading</button>
-                      </div>
-                      <p className="text-xs text-cream/50">{APIARY_HINTS.temperatureC} · {APIARY_HINTS.humidityPct} · {APIARY_HINTS.soundHz}</p>
-                      {readingSubmitError && <p className="text-xs text-red-400">{readingSubmitError}</p>}
-                    </form>
-                  </div>
-                )}
-
-                {/* Batches */}
-                <div className="card">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-serif font-bold text-honey">Honey Batches</h2>
-                    <button
-                      onClick={() => setShowNewBatch(!showNewBatch)}
-                      className="btn-secondary text-sm"
-                    >
-                      {showNewBatch ? 'Cancel' : '+ New Batch'}
-                    </button>
-                  </div>
-
-                  {showNewBatch && (
-                    <form onSubmit={handleCreateBatch} className="mb-6 pb-6 border-b border-honey/20 space-y-3" noValidate>
-                      <div className="grid md:grid-cols-2 gap-3">
-                        <div className="md:col-span-2">
-                          <label htmlFor="batch-hive" className="mb-1 block text-xs text-cream/60">Harvest from hive</label>
-                          <select
-                            id="batch-hive"
-                            value={newBatchHive || selectedHive}
-                            onChange={(e) => setNewBatchHive(e.target.value)}
-                            className="input-field text-sm"
-                            required
-                            aria-invalid={Boolean(batchErrors.hiveId)}
-                          >
-                            <option value="" disabled>Select a hive</option>
-                            {hives.map((hive) => (
-                              <option key={hive.id} value={hive.id}>
-                                {hive.name} — {hive.location}
-                              </option>
-                            ))}
-                          </select>
-                          {batchErrors.hiveId && <p className="mt-1 text-xs text-red-400">{batchErrors.hiveId}</p>}
-                        </div>
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="Honey type (e.g., Wildflower)"
-                            value={newBatchType}
-                            onChange={(e) => setNewBatchType(e.target.value)}
-                            className="input-field text-sm"
-                            required
-                            minLength={FIELD_LIMITS.honeyType.minLength}
-                            maxLength={FIELD_LIMITS.honeyType.maxLength}
-                            autoComplete="off"
-                            aria-invalid={Boolean(batchErrors.honeyType)}
-                          />
-                          {batchErrors.honeyType && <p className="mt-1 text-xs text-red-400">{batchErrors.honeyType}</p>}
-                        </div>
-                        <div>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            step={FIELD_LIMITS.quantityKg.step}
-                            min={0.1}
-                            max={FIELD_LIMITS.quantityKg.max}
-                            placeholder="Quantity (kg)"
-                            value={newBatchQty}
-                            onChange={(e) => setNewBatchQty(e.target.value)}
-                            className="input-field text-sm"
-                            required
-                            aria-invalid={Boolean(batchErrors.quantity)}
-                          />
-                          {batchErrors.quantity && <p className="mt-1 text-xs text-red-400">{batchErrors.quantity}</p>}
-                        </div>
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="Apiary location"
-                            value={newBatchLocation}
-                            onChange={(e) => setNewBatchLocation(e.target.value)}
-                            className="input-field text-sm"
-                            required
-                            minLength={FIELD_LIMITS.apiaryLocation.minLength}
-                            maxLength={FIELD_LIMITS.apiaryLocation.maxLength}
-                            autoComplete="off"
-                            aria-invalid={Boolean(batchErrors.location)}
-                          />
-                          {batchErrors.location && <p className="mt-1 text-xs text-red-400">{batchErrors.location}</p>}
-                        </div>
-                        <div>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            step={FIELD_LIMITS.moisturePct.step}
-                            placeholder="Measured moisture %"
-                            title={APIARY_HINTS.moisturePct}
-                            value={newBatchMoisture}
-                            onChange={(e) => setNewBatchMoisture(e.target.value)}
-                            className="input-field text-sm"
-                            min={FIELD_LIMITS.moisturePct.min}
-                            max={FIELD_LIMITS.moisturePct.max}
-                            required
-                            aria-invalid={Boolean(batchErrors.moisture)}
-                          />
-                          {batchErrors.moisture && <p className="mt-1 text-xs text-red-400">{batchErrors.moisture}</p>}
-                        </div>
-                      </div>
-                      <p className="text-xs text-cream/50">{APIARY_HINTS.moisturePct} · quantity must be &gt; 0 kg</p>
-                      {batchSubmitError && <p className="text-xs text-red-400">{batchSubmitError}</p>}
-                      <button type="submit" className="btn-primary w-full text-sm">
-                        Create & Generate QR
-                      </button>
-                    </form>
-                  )}
-
-                  {userBatches.length > 0 ? (
-                    <div className="space-y-3">
-                      {userBatches.map((batch) => (
-                        <div key={batch.id} className="bg-espresso/50 p-4 rounded-lg border border-honey/20">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h3 className="font-semibold text-cream">{batch.honey_type}</h3>
-                              <p className="text-sm text-cream/60">{batch.quantity_kg} kg</p>
-                            </div>
-                            <div className={`text-xs font-semibold ${
-                              batch.status === 'HARVESTED' ? 'badge-watch' : 'badge-verified'
-                            }`}>
-                              {batch.status}
-                            </div>
-                          </div>
-                          {batch.purity_score !== null && (
-                            <p className="text-xs text-cream/60">
-                              Purity: {(batch.purity_score || 0).toFixed(1)}/100
-                            </p>
-                          )}
-                          <div className="mt-3 flex gap-2">
-                            <a
-                              href={batchAPI.getQR(batch.id)}
-                              download
-                              className="text-sm text-honey hover:text-amber"
-                            >
-                              Download QR
-                            </a>
-                            <Link
-                              href={`/verify/${batch.id}`}
-                              className="text-sm text-honey hover:text-amber"
-                            >
-                              View Public Page
-                            </Link>
-                            <button
-                              onClick={() => downloadComplianceReport(batch.id)}
-                              className="text-sm text-honey hover:text-amber"
-                            >
-                              Compliance Report
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-cream/60">No batches yet. Create your first harvest!</p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="card text-center py-12">
-                <p className="text-cream/60 mb-4">Create your first hive to get started</p>
-              </div>
-            )}
-          </div>
+      <div className="flex flex-wrap gap-2">
+          <Button
+            disabled={hives.length === 0}
+            onClick={() => {
+              if (!recordHiveId && hives[0]) setRecordHiveId(hives[0].id)
+              setRecordOpen(true)
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" /> Record Reading
+          </Button>
+          <Button variant="outline" disabled={hives.length === 0} onClick={() => setBatchOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Create Harvest Batch
+          </Button>
         </div>
       </div>
-    </main>
+
+      {hives.length > 1 && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Record reading for:</span>
+          <Select value={recordHiveId} onValueChange={setRecordHiveId}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Select hive" /></SelectTrigger>
+            <SelectContent>
+              {hives.map((h) => (
+                <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Unable to load hives</AlertTitle>
+          <AlertDescription className="flex items-center gap-2">
+            {error}
+            <Button size="sm" variant="outline" onClick={loadAll}>Retry</Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* KPI cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Hives</CardTitle></CardHeader>
+          <CardContent>
+            {loading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold">{hives.length}</div>}
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Hexagon className="h-3 w-3" /> Registered in your apiary</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Healthy Hives</CardTitle></CardHeader>
+          <CardContent>
+            {loading || healthLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold text-emerald-600">{counts.healthy}</div>}
+            <p className="mt-1 text-xs text-muted-foreground">Status HEALTHY</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Hives to Watch</CardTitle></CardHeader>
+          <CardContent>
+            {loading || healthLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold text-amber-600">{counts.watch}</div>}
+            <p className="mt-1 text-xs text-muted-foreground">Status WATCH</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">High Risk</CardTitle></CardHeader>
+          <CardContent>
+            {loading || healthLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-3xl font-bold text-destructive">{counts.high}</div>}
+            <p className="mt-1 text-xs text-muted-foreground">Status HIGH_RISK</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Hive Health */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Hive Health</CardTitle>
+          <Button variant="ghost" size="sm" asChild><Link href="/dashboard/hives">View all</Link></Button>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Hive</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Confidence</TableHead>
+                    <TableHead>Temp</TableHead>
+                    <TableHead>Humidity</TableHead>
+                    <TableHead>Weight</TableHead>
+                    <TableHead>Sound</TableHead>
+                    <TableHead>Trend</TableHead>
+                    <TableHead>Est. Yield</TableHead>
+                    <TableHead>Next Harvest</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[0, 1, 2].map((i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : hives.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="font-medium">Your apiary is empty. Add your first hive to start monitoring.</p>
+              <Button className="mt-4" onClick={() => setHiveOpen(true)}><Plus className="mr-1 h-4 w-4" /> Add Hive</Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Hive</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Confidence</TableHead>
+                    <TableHead>Temp</TableHead>
+                    <TableHead>Humidity</TableHead>
+                    <TableHead>Weight</TableHead>
+                    <TableHead>Sound</TableHead>
+                    <TableHead>Trend</TableHead>
+                    <TableHead>Est. Yield</TableHead>
+                    <TableHead>Next Harvest</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map(({ hive, health, healthError }) => {
+                    const lr = health?.latest_reading
+                    return (
+                      <TableRow
+                        key={hive.id}
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/dashboard/hives/${hive.id}`)}
+                      >
+                        <TableCell>
+                          <div className="font-medium whitespace-nowrap">{hive.name}</div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap">
+                            {hive.location} • {hive.species.replace(/_/g, " ")}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {healthLoading && !health ? (
+                            <Skeleton className="h-6 w-20" />
+                          ) : health ? (
+                            <HealthBadge status={health.health.status} />
+                          ) : (
+                            <Badge variant="secondary">No readings</Badge>
+                          )}
+                        </TableCell>
+                        {health ? (
+                          <>
+                            <TableCell className="whitespace-nowrap">{Math.round(health.health.confidence * 100)}%</TableCell>
+                            <TableCell className="whitespace-nowrap">{lr?.temperature_c ?? "—"}°C</TableCell>
+                            <TableCell className="whitespace-nowrap">{lr?.humidity_pct ?? "—"}%</TableCell>
+                            <TableCell className="whitespace-nowrap">{lr?.weight_kg ?? "—"} kg</TableCell>
+                            <TableCell className="whitespace-nowrap">{lr?.sound_hz ?? "—"} Hz</TableCell>
+                            <TableCell className="whitespace-nowrap">{health.productivity?.trend ?? "—"}</TableCell>
+                            <TableCell className="whitespace-nowrap">{health.productivity?.yield_estimate_kg ?? "—"} kg</TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {health.productivity?.next_harvest_days != null
+                                ? `${health.productivity.next_harvest_days} days`
+                                : "—"}
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell colSpan={8} className="text-xs text-muted-foreground">
+                              {healthError?.includes("No sensor readings")
+                                ? "No sensor readings yet. Record the first reading to begin hive health analysis."
+                                : healthError ?? "Health unavailable."}
+                            </TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {(counts.watch > 0 || counts.high > 0) && (
+            <Alert className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Attention needed</AlertTitle>
+              <AlertDescription>
+                {counts.watch > 0 && `${counts.watch} hive(s) need watching. `}
+                {counts.high > 0 && `${counts.high} hive(s) at high risk. `}
+                Open the hive detail page for diagnosis and recommendations.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" asChild><Link href="/dashboard/batches"><Package className="mr-1 h-4 w-4" /> Go to Honey Batches</Link></Button>
+        <Button variant="outline" asChild><Link href="/dashboard/traceability">View Traceability</Link></Button>
+      </div>
+
+      <RecordReadingDialog
+        open={recordOpen}
+        onOpenChange={setRecordOpen}
+        hiveId={recordHiveId}
+        hiveName={hives.find((h) => h.id === recordHiveId)?.name}
+        onSuccess={refresh}
+      />
+      <CreateBatchDialog open={batchOpen} onOpenChange={setBatchOpen} hives={hives} defaultHiveId={recordHiveId} onCreated={refresh} />
+      <CreateHiveDialog open={hiveOpen} onOpenChange={setHiveOpen} onCreated={refresh} />
+    </div>
   )
 }
