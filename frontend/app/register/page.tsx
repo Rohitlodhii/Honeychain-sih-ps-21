@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { useI18n } from '@/lib/i18n/context'
 
 const SIMPLE_INPUT_CLASS =
   'shadow-none outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input active:outline-none'
@@ -34,21 +35,22 @@ const TOTAL_STEPS = 5
 
 type EntityRole = 'beekeeper' | 'cooperative_admin'
 
-const ENTITY_OPTIONS: { value: EntityRole; label: string; hint: string }[] = [
-  { value: 'beekeeper', label: 'Farmer / Beekeeper', hint: 'Manage hives & harvests' },
-  { value: 'cooperative_admin', label: 'Cooperative', hint: 'KVIC cluster admin' },
-]
-
-const STEP_SUBTITLES = [
-  'Select your entity',
-  'Enter your mobile number',
-  'Enter the verification code',
-  'Tell us about yourself',
-  'Set your password',
-]
-
 export default function RegisterPage() {
   const router = useRouter()
+  const { t } = useI18n()
+
+  const ENTITY_OPTIONS: { value: EntityRole; label: string; hint: string }[] = [
+    { value: 'beekeeper', label: t.register.beekeeper, hint: t.register.beekeeperHint },
+    { value: 'cooperative_admin', label: t.register.cooperative, hint: t.register.cooperativeHint },
+  ]
+
+  const STEP_SUBTITLES = [
+    t.register.s1,
+    t.register.s2,
+    t.register.s3,
+    t.register.s4,
+    t.register.s5,
+  ]
 
   const [step, setStep] = useState(1)
   const [entity, setEntity] = useState<EntityRole | ''>('')
@@ -84,7 +86,7 @@ export default function RegisterPage() {
   const handleEntityContinue = (e: React.FormEvent) => {
     e.preventDefault()
     if (!entity) {
-      fail('Please select your entity to continue.')
+      fail(t.register.errEntity)
       return
     }
     goTo(2)
@@ -94,7 +96,7 @@ export default function RegisterPage() {
     e.preventDefault()
     const trimmed = phone.trim()
     if (trimmed.replace(/\D/g, '').length < 10) {
-      fail('Please enter a valid 10-digit mobile number.')
+      fail(t.register.errPhone)
       return
     }
     goTo(3)
@@ -103,7 +105,7 @@ export default function RegisterPage() {
   const handleOtpVerify = (e: React.FormEvent) => {
     e.preventDefault()
     if (otp.length < 4) {
-      fail('Please enter the 4-digit OTP.')
+      fail(t.register.errOtp)
       return
     }
     goTo(4)
@@ -112,16 +114,16 @@ export default function RegisterPage() {
   const handleProfileContinue = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
-      fail('Please enter your full name.')
+      fail(t.register.errName)
       return
     }
     const trimmedEmail = email.trim()
     if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      fail('Please enter a valid email address (or leave it blank).')
+      fail(t.register.errEmail)
       return
     }
     if (entity === 'cooperative_admin' && !adminInviteCode.trim()) {
-      fail('Please enter your cooperative-admin invite code.')
+      fail(t.register.errInvite)
       return
     }
     goTo(5)
@@ -132,16 +134,16 @@ export default function RegisterPage() {
     setError('')
 
     if (!entity) {
-      fail('Please select your entity first.')
+      fail(t.register.errEntityFirst)
       goTo(1)
       return
     }
     if (password.length < 6) {
-      fail('Password must be at least 6 characters.')
+      fail(t.register.errPassLen)
       return
     }
     if (password !== confirmPassword) {
-      fail('Passwords do not match.')
+      fail(t.register.errPassMatch)
       return
     }
 
@@ -166,7 +168,7 @@ export default function RegisterPage() {
 
       await authAPI.register(payload)
 
-      toast.success('Account created! Signing you in…')
+      toast.success(t.register.createdSigningIn)
       try {
         const loginRes = await authAPI.login(phone.trim(), password)
         localStorage.setItem('token', loginRes.data.access_token)
@@ -176,7 +178,7 @@ export default function RegisterPage() {
         router.push('/login?registered=1')
       }
     } catch (err: unknown) {
-      let message = 'Registration failed. Please try again.'
+      let message = t.register.registerFailed
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const resp = (err as { response?: { data?: { detail?: unknown } } })
           .response
@@ -192,7 +194,7 @@ export default function RegisterPage() {
           }
         }
       } else if (err instanceof Error && !navigator.onLine) {
-        message = 'You appear to be offline. Connect to the internet to create your account.'
+        message = t.register.offlineErr
       }
       fail(message)
     } finally {
@@ -207,14 +209,22 @@ export default function RegisterPage() {
       <Card className="w-full max-w-4xl overflow-hidden p-0 grid grid-cols-1 md:grid-cols-2">
         {/* Left — form side */}
         <div className="flex min-h-[480px] flex-col p-6 sm:p-8 md:min-h-[560px]">
-          {/* Top row: brand left, progress disc + counter right */}
+          {/* Top row: branding + progress disc + counter */}
           <div className="flex items-start justify-between">
-            <span className="text-lg font-semibold tracking-tight">
-              beelink
-            </span>
+            <Link href="/" className="flex items-center gap-2" aria-label="Beelink home">
+              <Image
+                src="/logo.png"
+                alt="Beelink logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+                priority
+              />
+              <span className="text-xl font-semibold tracking-tight">Beelink</span>
+            </Link>
             <div
               className="flex shrink-0 items-center gap-2"
-              aria-label={`Step ${step} of ${TOTAL_STEPS}`}
+              aria-label={`${t.register.stepAria} ${step} ${t.register.of} ${TOTAL_STEPS}`}
             >
               <span
                 aria-hidden
@@ -226,14 +236,14 @@ export default function RegisterPage() {
                 <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-card" />
               </span>
               <span className="text-xs font-medium text-muted-foreground">
-                {step} of {TOTAL_STEPS}
+                {step} {t.register.of} {TOTAL_STEPS}
               </span>
             </div>
           </div>
 
           {/* Heading */}
           <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Create new account
+            {t.register.title}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {STEP_SUBTITLES[step - 1]}
@@ -265,7 +275,7 @@ export default function RegisterPage() {
                     className="space-y-4"
                   >
                     <div className="space-y-4">
-                      <Label htmlFor="register-entity">Entity</Label>
+                      <Label htmlFor="register-entity">{t.register.entity}</Label>
                       <Select
                         value={entity}
                         onValueChange={(value) => {
@@ -277,11 +287,11 @@ export default function RegisterPage() {
                           id="register-entity"
                           className="shadow-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                         >
-                          <SelectValue placeholder="Select entity" />
+                          <SelectValue placeholder={t.register.entityPh} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectLabel>Entity</SelectLabel>
+                            <SelectLabel>{t.register.entity}</SelectLabel>
                             {ENTITY_OPTIONS.map((option) => (
                               <SelectItem
                                 key={option.value}
@@ -312,13 +322,13 @@ export default function RegisterPage() {
                     className="space-y-4"
                   >
                     <div className="space-y-4">
-                      <Label htmlFor="register-phone">Mobile number</Label>
+                      <Label htmlFor="register-phone">{t.register.mobile}</Label>
                       <Input
                         id="register-phone"
                         type="tel"
                         inputMode="tel"
                         autoComplete="tel"
-                        placeholder="+91 XXXXX XXXXX"
+                        placeholder={t.register.mobilePh}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         required
@@ -336,7 +346,7 @@ export default function RegisterPage() {
                   >
                     <div className="space-y-4">
                       <Label>
-                        OTP sent to {phone.trim() || 'your mobile'}
+                        {t.register.otpTo} {phone.trim() || t.register.otpFallback}
                       </Label>
                       <InputOTP
                         maxLength={4}
@@ -367,12 +377,12 @@ export default function RegisterPage() {
                     className="space-y-4"
                   >
                     <div className="space-y-4">
-                      <Label htmlFor="register-name">Full name</Label>
+                      <Label htmlFor="register-name">{t.register.fullName}</Label>
                       <Input
                         id="register-name"
                         type="text"
                         autoComplete="name"
-                        placeholder="e.g. Ramesh Kumar"
+                        placeholder={t.register.fullNamePh}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
@@ -381,16 +391,16 @@ export default function RegisterPage() {
                     </div>
                     <div className="space-y-4">
                       <Label htmlFor="register-email">
-                        Email{' '}
+                        {t.register.email}{' '}
                         <span className="font-normal text-muted-foreground">
-                          (optional)
+                          {t.register.optional}
                         </span>
                       </Label>
                       <Input
                         id="register-email"
                         type="email"
                         autoComplete="email"
-                        placeholder="you@example.com"
+                        placeholder={t.register.emailPh}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className={SIMPLE_INPUT_CLASS}
@@ -399,13 +409,13 @@ export default function RegisterPage() {
                     {entity === 'cooperative_admin' && (
                       <div className="space-y-4">
                         <Label htmlFor="register-invite">
-                          Admin invite code
+                          {t.register.invite}
                         </Label>
                         <Input
                           id="register-invite"
                           type="text"
                           autoComplete="off"
-                          placeholder="Enter cooperative invite code"
+                          placeholder={t.register.invitePh}
                           value={adminInviteCode}
                           onChange={(e) =>
                             setAdminInviteCode(e.target.value)
@@ -425,12 +435,12 @@ export default function RegisterPage() {
                     className="space-y-4"
                   >
                     <div className="space-y-4">
-                      <Label htmlFor="register-password">Password</Label>
+                      <Label htmlFor="register-password">{t.register.password}</Label>
                       <Input
                         id="register-password"
                         type="password"
                         autoComplete="new-password"
-                        placeholder="Minimum 6 characters"
+                        placeholder={t.register.passwordPh}
                         minLength={6}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -439,12 +449,12 @@ export default function RegisterPage() {
                       />
                     </div>
                     <div className="space-y-4">
-                      <Label htmlFor="register-confirm">Confirm password</Label>
+                      <Label htmlFor="register-confirm">{t.register.confirm}</Label>
                       <Input
                         id="register-confirm"
                         type="password"
                         autoComplete="new-password"
-                        placeholder="Repeat your password"
+                        placeholder={t.register.confirmPh}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
@@ -465,7 +475,7 @@ export default function RegisterPage() {
                 form="register-step-1"
                 className="w-full"
               >
-                Next
+                {t.register.next}
               </Button>
             )}
 
@@ -477,14 +487,14 @@ export default function RegisterPage() {
                   className="flex-1"
                   onClick={() => goTo(1)}
                 >
-                  Back
+                  {t.register.back}
                 </Button>
                 <Button
                   type="submit"
                   form="register-step-2"
                   className="flex-1"
                 >
-                  Next
+                  {t.register.next}
                 </Button>
               </div>
             )}
@@ -496,7 +506,7 @@ export default function RegisterPage() {
                   form="register-step-3"
                   className="w-full"
                 >
-                  Next
+                  {t.register.next}
                 </Button>
                 <div className="flex items-center justify-between">
                   <Button
@@ -504,7 +514,7 @@ export default function RegisterPage() {
                     variant="outline"
                     onClick={() => goTo(2)}
                   >
-                    Back
+                    {t.register.back}
                   </Button>
                   <button
                     type="button"
@@ -513,7 +523,7 @@ export default function RegisterPage() {
                     }}
                     className="text-xs text-primary underline-offset-4 hover:underline"
                   >
-                    Resend OTP
+                    {t.register.resendOtp}
                   </button>
                 </div>
               </div>
@@ -527,14 +537,14 @@ export default function RegisterPage() {
                   className="flex-1"
                   onClick={() => goTo(3)}
                 >
-                  Back
+                  {t.register.back}
                 </Button>
                 <Button
                   type="submit"
                   form="register-step-4"
                   className="flex-1"
                 >
-                  Next
+                  {t.register.next}
                 </Button>
               </div>
             )}
@@ -548,7 +558,7 @@ export default function RegisterPage() {
                   onClick={() => goTo(4)}
                   disabled={submitting}
                 >
-                  Back
+                  {t.register.back}
                 </Button>
                 <Button
                   type="submit"
@@ -556,7 +566,7 @@ export default function RegisterPage() {
                   className="flex-1"
                   disabled={submitting}
                 >
-                  {submitting ? 'Creating account…' : 'Create account'}
+                  {submitting ? t.register.creating : t.register.createBtn}
                 </Button>
               </div>
             )}
@@ -565,12 +575,12 @@ export default function RegisterPage() {
           <Separator className="my-4" />
 
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t.register.haveAccount}{' '}
             <Link
               href="/login"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Sign in
+              {t.register.signInLink}
             </Link>
           </p>
         </div>
@@ -579,7 +589,7 @@ export default function RegisterPage() {
         <div className="relative hidden min-h-[560px] md:block">
           <Image
             src="/images/login.png"
-            alt="Beekeeper holding a honeycomb"
+            alt={t.register.imgAlt}
             fill
             priority
             className="object-cover"

@@ -21,8 +21,10 @@ import { HealthBadge } from "@/components/dashboard/status-badges"
 import { CreateHiveDialog } from "@/components/dashboard/create-hive-dialog"
 import { RecordReadingDialog } from "@/components/dashboard/record-reading-dialog"
 import { Plus } from "lucide-react"
+import { useI18n } from "@/lib/i18n/context"
 
 export default function HivesPage() {
+  const { t } = useI18n()
   const [hives, setHives] = React.useState<Hive[]>([])
   const [healthMap, setHealthMap] = React.useState<Record<string, HiveHealthResponse | null>>({})
   const [loading, setLoading] = React.useState(true)
@@ -68,16 +70,16 @@ export default function HivesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My Hives</h1>
-          <p className="text-sm text-muted-foreground">Hive monitoring and hive management.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.hives.title}</h1>
+          <p className="text-sm text-muted-foreground">{t.hives.subtitle}</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}><Plus className="mr-1 h-4 w-4" /> Add Hive</Button>
+        <Button onClick={() => setCreateOpen(true)}><Plus className="mr-1 h-4 w-4" /> {t.hives.addHive}</Button>
       </div>
 
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Unable to load hives</AlertTitle>
-          <AlertDescription className="flex items-center gap-2">{error} <Button size="sm" variant="outline" onClick={load}>Retry</Button></AlertDescription>
+          <AlertTitle>{t.hives.loadFail}</AlertTitle>
+          <AlertDescription className="flex items-center gap-2">{error} <Button size="sm" variant="outline" onClick={load}>{t.common.retry}</Button></AlertDescription>
         </Alert>
       )}
 
@@ -86,18 +88,18 @@ export default function HivesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Hive</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Species</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Confidence</TableHead>
-                <TableHead>Temp</TableHead>
-                <TableHead>Humidity</TableHead>
-                <TableHead>Weight</TableHead>
-                <TableHead>Sound</TableHead>
-                <TableHead>Trend</TableHead>
-                <TableHead>Est. Yield</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t.hives.thHive}</TableHead>
+                <TableHead>{t.hives.thLocation}</TableHead>
+                <TableHead>{t.hives.thSpecies}</TableHead>
+                <TableHead>{t.hives.thStatus}</TableHead>
+                <TableHead>{t.hives.thConfidence}</TableHead>
+                <TableHead>{t.hives.thTemp}</TableHead>
+                <TableHead>{t.hives.thHumidity}</TableHead>
+                <TableHead>{t.hives.thWeight}</TableHead>
+                <TableHead>{t.hives.thSound}</TableHead>
+                <TableHead>{t.hives.thTrend}</TableHead>
+                <TableHead>{t.hives.thYield}</TableHead>
+                <TableHead className="text-right">{t.hives.thActions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -122,26 +124,26 @@ export default function HivesPage() {
         </div>
       ) : hives.length === 0 ? (
         <div className="rounded-lg border py-12 text-center">
-          <p className="font-medium">Your apiary is empty. Add your first hive to start monitoring.</p>
-          <Button className="mt-4" onClick={() => setCreateOpen(true)}><Plus className="mr-1 h-4 w-4" /> Add Hive</Button>
+          <p className="font-medium">{t.hives.empty}</p>
+          <Button className="mt-4" onClick={() => setCreateOpen(true)}><Plus className="mr-1 h-4 w-4" /> {t.hives.addHive}</Button>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Hive</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Species</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Confidence</TableHead>
-                <TableHead>Temp</TableHead>
-                <TableHead>Humidity</TableHead>
-                <TableHead>Weight</TableHead>
-                <TableHead>Sound</TableHead>
-                <TableHead>Trend</TableHead>
-                <TableHead>Est. Yield</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t.hives.thHive}</TableHead>
+                <TableHead>{t.hives.thLocation}</TableHead>
+                <TableHead>{t.hives.thSpecies}</TableHead>
+                <TableHead>{t.hives.thStatus}</TableHead>
+                <TableHead>{t.hives.thConfidence}</TableHead>
+                <TableHead>{t.hives.thTemp}</TableHead>
+                <TableHead>{t.hives.thHumidity}</TableHead>
+                <TableHead>{t.hives.thWeight}</TableHead>
+                <TableHead>{t.hives.thSound}</TableHead>
+                <TableHead>{t.hives.thTrend}</TableHead>
+                <TableHead>{t.hives.thYield}</TableHead>
+                <TableHead className="text-right">{t.hives.thActions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -159,7 +161,7 @@ export default function HivesPage() {
                       ) : health ? (
                         <HealthBadge status={health.health.status} />
                       ) : (
-                        <Badge variant="secondary">No readings</Badge>
+                        <Badge variant="secondary">{t.common.noReadings}</Badge>
                       )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
@@ -175,8 +177,8 @@ export default function HivesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" asChild><Link href={`/dashboard/hives/${hive.id}`}>Open</Link></Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setRecordHive(hive); setRecordOpen(true) }}>Record</Button>
+                        <Button size="sm" variant="ghost" asChild><Link href={`/dashboard/hives/${hive.id}`}>{t.hives.open}</Link></Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setRecordHive(hive); setRecordOpen(true) }}>{t.hives.record}</Button>
                       </div>
                     </TableCell>
                   </TableRow>

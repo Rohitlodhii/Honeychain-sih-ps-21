@@ -1,10 +1,10 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
-  Hexagon,
   Package,
   BarChart3,
   Link2,
@@ -36,18 +36,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useI18n } from "@/lib/i18n/context"
+import { LanguageSwitcher } from "@/components/language-switcher"
 
 const NAV = [
-  { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { title: "My Hives", href: "/dashboard/hives", icon: HiveIcon },
-  { title: "Honey Batches", href: "/dashboard/batches", icon: Package },
-  { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { title: "Traceability", href: "/dashboard/traceability", icon: Link2 },
-  { title: "Profile", href: "/dashboard/profile", icon: User },
-]
+  { key: "overview", href: "/dashboard", icon: LayoutDashboard },
+  { key: "hives", href: "/dashboard/hives", icon: HiveIcon },
+  { key: "batches", href: "/dashboard/batches", icon: Package },
+  { key: "analytics", href: "/dashboard/analytics", icon: BarChart3 },
+  { key: "traceability", href: "/dashboard/traceability", icon: Link2 },
+  { key: "profile", href: "/dashboard/profile", icon: User },
+] as const
 
 function initials(name?: string | null) {
-  if (!name) return "HC"
+  if (!name) return "BE"
   const parts = name.trim().split(/\s+/)
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
@@ -57,6 +59,16 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, loading, logout } = useAuth()
+  const { t } = useI18n()
+
+  const titles: Record<(typeof NAV)[number]["key"], string> = {
+    overview: t.sidebar.overview,
+    hives: t.sidebar.hives,
+    batches: t.sidebar.batches,
+    analytics: t.sidebar.analytics,
+    traceability: t.sidebar.traceability,
+    profile: t.sidebar.profile,
+  }
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard"
@@ -67,26 +79,30 @@ export function AppSidebar() {
     <Sidebar collapsible="offcanvas">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Hexagon className="h-5 w-5" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Beelink logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg object-cover"
+          />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold tracking-tight">HoneyChain</span>
-            <span className="text-xs text-muted-foreground">Beekeeper Console</span>
+            <span className="text-sm font-semibold tracking-tight">Beelink</span>
+            <span className="text-xs text-muted-foreground">{t.sidebar.console}</span>
           </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Apiary</SidebarGroupLabel>
+          <SidebarGroupLabel>{t.sidebar.group}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.title}>
+                  <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={titles[item.key]}>
                     <Link href={item.href}>
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span>{titles[item.key]}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -96,6 +112,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <div className="px-2 pb-1">
+          <LanguageSwitcher />
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             {loading ? (
@@ -119,9 +138,9 @@ export function AppSidebar() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{user?.name ?? "Beekeeper"}</span>
+                      <span className="truncate font-semibold">{user?.name ?? t.sidebar.beekeeperFallback}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {(user?.cluster ?? "No cluster") + " • " + (user?.phone ?? "")}
+                        {(user?.cluster ?? t.sidebar.noCluster) + " • " + (user?.phone ?? "")}
                       </span>
                     </div>
                     <ChevronUp className="ml-auto size-4" />
@@ -149,11 +168,11 @@ export function AppSidebar() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
                     <User className="mr-2 h-4 w-4" />
-                    Profile
+                    {t.sidebar.profileItem}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    Log out
+                    {t.sidebar.logout}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

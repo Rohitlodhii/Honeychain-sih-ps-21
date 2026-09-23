@@ -25,6 +25,6 @@ export const batches = {
     const disposition = (res.headers?.['content-disposition'] as string | undefined) ?? undefined
     const blob = res.data as Blob
     const pdf = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' })
-    return downloadBlob(pdf, `honeychain-${batchId}-compliance.pdf`, disposition)
+    return downloadBlob(pdf, `beelink-${batchId}-compliance.pdf`, disposition)
   },
 }

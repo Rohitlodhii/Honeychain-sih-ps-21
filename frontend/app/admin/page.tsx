@@ -4,7 +4,42 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authAPI, adminAPI } from '@/lib/api'
 import Link from 'next/link'
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { LanguageSwitcher } from '@/components/language-switcher'
+import { useI18n } from '@/lib/i18n/context'
+import {
+  ArrowLeft,
+  FlaskConical,
+  Hexagon,
+  LogOut,
+  Package,
+  ShieldAlert,
+  ShieldCheck,
+  Users,
+} from 'lucide-react'
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from 'recharts'
 
 interface AdminData {
   total_beekeepers: number
@@ -30,8 +65,58 @@ interface AdminData {
   }>
 }
 
+const CHART_COLORS = [
+  'var(--color-chart-1)',
+  'var(--color-chart-2)',
+  'var(--color-chart-3)',
+  'var(--color-chart-4)',
+  'var(--color-chart-5)',
+]
+
+function AdminHeader() {
+  const router = useRouter()
+  const { t } = useI18n()
+
+  return (
+    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Hexagon className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight">{t.admin.mission}</h1>
+            <p className="text-xs text-muted-foreground">{t.admin.dashboard}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <LanguageSwitcher />
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/dashboard">
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              {t.admin.backToHives}
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem('token')
+              router.push('/')
+            }}
+          >
+            <LogOut className="mr-1 h-4 w-4" />
+            {t.admin.logout}
+          </Button>
+        </div>
+      </div>
+    </header>
+  )
+}
+
 export default function AdminPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [user, setUser] = useState<any>(null)
   const [data, setData] = useState<AdminData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -68,12 +153,21 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-espresso flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl text-honey mb-4">📊</div>
-          <p className="text-cream">Loading KVIC Dashboard...</p>
+      <main className="min-h-screen bg-background">
+        <AdminHeader />
+        <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-28 w-full" />
+            ))}
+          </div>
+          <Skeleton className="h-56 w-full" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Skeleton className="h-80 w-full" />
+            <Skeleton className="h-80 w-full" />
+          </div>
         </div>
-      </div>
+      </main>
     )
   }
 
@@ -96,187 +190,291 @@ export default function AdminPage() {
     value: count,
   }))
 
-  const COLORS = ['#E3A530', '#B6651D', '#7C9473', '#B4523A', '#F3E9D2']
+  const ledgerValid = data.ledger_integrity.valid
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-espresso via-surface to-espresso">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-espresso/95 backdrop-blur border-b border-honey/20">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-serif font-bold text-honey">KVIC Honey Mission</h1>
-            <p className="text-sm text-cream/60">Cooperative Dashboard</p>
-          </div>
+    <main className="min-h-screen bg-background">
+      <AdminHeader />
 
-          <div className="flex gap-3">
-            <Link href="/dashboard" className="btn-ghost">
-              Back to Hives
-            </Link>
-            <button
-              onClick={() => {
-                localStorage.removeItem('token')
-                router.push('/')
-              }}
-              className="btn-ghost"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+        {/* Key metrics */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t.admin.totalBeekeepers}
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{data.total_beekeepers}</div>
+            </CardContent>
+          </Card>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Key Metrics */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="card">
-            <p className="text-xs font-semibold text-honey uppercase mb-1">Total Beekeepers</p>
-            <p className="text-3xl font-serif font-bold text-cream">{data.total_beekeepers}</p>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t.admin.activeHives}
+              </CardTitle>
+              <Hexagon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{data.total_hives}</div>
+            </CardContent>
+          </Card>
 
-          <div className="card">
-            <p className="text-xs font-semibold text-honey uppercase mb-1">Active Hives</p>
-            <p className="text-3xl font-serif font-bold text-cream">{data.total_hives}</p>
-          </div>
-
-          <div className="card">
-            <p className="text-xs font-semibold text-honey uppercase mb-1">Total Honey</p>
-            <p className="text-3xl font-serif font-bold text-cream">{data.total_honey_kg.toFixed(0)}</p>
-            <p className="text-xs text-cream/60">kg</p>
-          </div>
-
-          <div className="card">
-            <p className="text-xs font-semibold text-honey uppercase mb-1">Avg Purity</p>
-            <p className="text-3xl font-serif font-bold text-cream">
-              {data.avg_purity_score.toFixed(1)}
-            </p>
-            <p className="text-xs text-cream/60">/100</p>
-          </div>
-        </div>
-
-        {/* Ledger Integrity Status */}
-        <div className="mb-8">
-          <div className={`card border-2 ${
-            data.ledger_integrity.valid ? 'border-sage/50' : 'border-brick/50'
-          }`}>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-serif font-bold text-honey">Ledger Integrity</h2>
-                <p className="text-sm text-cream/60 mt-1">
-                  Blockchain-style verification of all honey batches in the network
-                </p>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t.admin.totalHoney}
+              </CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {data.total_honey_kg.toFixed(0)}
+                <span className="ml-1 text-base font-medium text-muted-foreground">
+                  {t.admin.kg}
+                </span>
               </div>
-              <div className={`text-4xl ${
-                data.ledger_integrity.valid ? 'text-sage' : 'text-brick'
-              }`}>
-                {data.ledger_integrity.valid ? '✓' : '✗'}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {t.admin.avgPurity}
+              </CardTitle>
+              <FlaskConical className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {data.avg_purity_score.toFixed(1)}
+                <span className="ml-1 text-base font-medium text-muted-foreground">/100</span>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Ledger integrity */}
+        <Card className={ledgerValid ? 'border-emerald-500/60' : 'border-destructive'}>
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                    ledgerValid
+                      ? 'bg-emerald-500/10 text-emerald-600'
+                      : 'bg-destructive/10 text-destructive'
+                  }`}
+                >
+                  {ledgerValid ? (
+                    <ShieldCheck className="h-6 w-6" />
+                  ) : (
+                    <ShieldAlert className="h-6 w-6" />
+                  )}
+                </div>
+                <div>
+                  <CardTitle>{t.admin.ledger}</CardTitle>
+                  <CardDescription>{t.admin.ledgerDesc}</CardDescription>
+                </div>
+              </div>
+              {ledgerValid ? (
+                <Badge className="border-transparent bg-emerald-600 text-white hover:bg-emerald-600/90">
+                  {t.admin.allValid}
+                </Badge>
+              ) : (
+                <Badge variant="destructive">{t.admin.tampered}</Badge>
+              )}
             </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-cream/60 uppercase font-semibold mb-1">Status</p>
-                <p className={`text-lg font-semibold ${
-                  data.ledger_integrity.valid ? 'text-sage' : 'text-brick'
-                }`}>
-                  {data.ledger_integrity.valid ? 'ALL BLOCKS VALID' : 'TAMPERING DETECTED'}
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t.admin.status}
+                </p>
+                <p
+                  className={`mt-1 text-lg font-semibold ${
+                    ledgerValid ? 'text-emerald-600' : 'text-destructive'
+                  }`}
+                >
+                  {ledgerValid ? t.admin.allValid : t.admin.tampered}
                 </p>
               </div>
-              <div>
-                <p className="text-xs text-cream/60 uppercase font-semibold mb-1">Total Blocks</p>
-                <p className="text-lg font-semibold text-cream">
+              <div className="rounded-lg border p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t.admin.totalBlocks}
+                </p>
+                <p className="mt-1 text-lg font-semibold">
                   {data.ledger_integrity.total_blocks}
                 </p>
               </div>
             </div>
 
-            {!data.ledger_integrity.valid && data.ledger_integrity.errors.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-brick/20">
-                <p className="text-xs font-semibold text-brick mb-2">Integrity Errors:</p>
-                <ul className="text-xs text-brick/80 space-y-1">
+            {!ledgerValid && data.ledger_integrity.errors.length > 0 && (
+              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                <p className="text-xs font-semibold text-destructive">
+                  {t.admin.integrityErrors}
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {data.ledger_integrity.errors.slice(0, 3).map((err, idx) => (
                     <li key={idx}>• {err}</li>
                   ))}
                   {data.ledger_integrity.errors.length > 3 && (
-                    <li>... and {data.ledger_integrity.errors.length - 3} more</li>
+                    <li>{t.admin.moreErrors(data.ledger_integrity.errors.length - 3)}</li>
                   )}
                 </ul>
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Charts */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          {/* Batches by Status */}
+        <div className="grid gap-4 lg:grid-cols-2">
           {statusChartData.length > 0 && (
-            <div className="card">
-              <h3 className="text-lg font-serif font-bold text-honey mb-4">Batches by Status</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statusChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={100}
-                    fill="#E3A530"
-                    dataKey="value"
-                  >
-                    {statusChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t.admin.batchesByStatus}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={statusChartData}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={100}
+                        label={({ name, value }) => `${name}: ${value}`}
+                      >
+                        {statusChartData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Hive Health Status */}
           {healthChartData.length > 0 && (
-            <div className="card">
-              <h3 className="text-lg font-serif font-bold text-honey mb-4">Hive Health Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={healthChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#666" />
-                  <XAxis dataKey="name" stroke="#F3E9D2" />
-                  <YAxis stroke="#F3E9D2" />
-                  <Tooltip contentStyle={{ backgroundColor: '#241B14', border: '1px solid #E3A530' }} />
-                  <Bar dataKey="value" fill="#E3A530" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t.admin.hiveHealthDist}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={healthChartData}
+                      margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <RechartsTooltip />
+                      <Bar
+                        dataKey="value"
+                        fill="var(--color-chart-2)"
+                        radius={[6, 6, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
-        {/* Cluster Breakdown */}
         {clusterChartData.length > 0 && (
-          <div className="card">
-            <h3 className="text-lg font-serif font-bold text-honey mb-4">Honey by Cluster</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={clusterChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#666" />
-                <XAxis dataKey="name" stroke="#F3E9D2" angle={-45} textAnchor="end" height={80} />
-                <YAxis stroke="#F3E9D2" label={{ value: 'Batches', angle: -90, position: 'insideLeft' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#241B14', border: '1px solid #E3A530' }} />
-                <Bar dataKey="value" fill="#B6651D" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.admin.honeyByCluster}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={clusterChartData}
+                    margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 12 }}
+                      angle={-30}
+                      textAnchor="end"
+                      height={70}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      label={{
+                        value: t.admin.batchesAxis,
+                        angle: -90,
+                        position: 'insideLeft',
+                      }}
+                    />
+                    <RechartsTooltip />
+                    <Bar
+                      dataKey="value"
+                      fill="var(--color-chart-1)"
+                      radius={[6, 6, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        <div className="card mt-6">
-          <h3 className="text-lg font-serif font-bold text-honey mb-4">Cooperative Reputation</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-cream">
-              <thead className="text-honey text-left"><tr><th>Cluster</th><th>Batches</th><th>Avg purity</th><th>Tamper incidents</th><th>Score</th></tr></thead>
-              <tbody>{data.reputation_leaderboard.map((entry) => (
-                <tr key={entry.cluster} className="border-t border-honey/20"><td>{entry.cluster}</td><td>{entry.batch_count}</td><td>{entry.avg_purity}</td><td>{entry.tamper_incidents}</td><td>{entry.score}</td></tr>
-              ))}</tbody>
-            </table>
-          </div>
-        </div>
+        {/* Reputation */}
+        {data.reputation_leaderboard.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.admin.reputation}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t.admin.thCluster}</TableHead>
+                      <TableHead>{t.admin.thBatches}</TableHead>
+                      <TableHead>{t.admin.thAvgPurity}</TableHead>
+                      <TableHead>{t.admin.thTamper}</TableHead>
+                      <TableHead className="text-right">{t.admin.thScore}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.reputation_leaderboard.map((entry) => (
+                      <TableRow key={entry.cluster}>
+                        <TableCell className="font-medium">{entry.cluster}</TableCell>
+                        <TableCell>{entry.batch_count}</TableCell>
+                        <TableCell>{entry.avg_purity}</TableCell>
+                        <TableCell>
+                          {entry.tamper_incidents > 0 ? (
+                            <Badge variant="destructive">{entry.tamper_incidents}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {entry.score}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </main>
   )

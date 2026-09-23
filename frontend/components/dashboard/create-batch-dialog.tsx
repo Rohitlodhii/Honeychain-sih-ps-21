@@ -28,6 +28,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PurityBadge } from "./status-badges"
 import { toast } from "sonner"
+import { useI18n } from "@/lib/i18n/context"
 
 export function CreateBatchDialog({
   open,
@@ -51,6 +52,7 @@ export function CreateBatchDialog({
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [saving, setSaving] = React.useState(false)
   const [created, setCreated] = React.useState<BatchCreateResponse | null>(null)
+  const { t, locale } = useI18n()
 
   React.useEffect(() => {
     if (open) {
@@ -81,14 +83,14 @@ export function CreateBatchDialog({
       location,
       moisture,
       ownedHiveIds: hives.map((h) => h.id),
-    })
+    }, locale)
     setErrors(errs)
     if (!payload) return
     setSaving(true)
     try {
       const res = await api.batches.create(payload)
       setCreated(res.data)
-      toast.success("Harvest batch created")
+      toast.success(t.createBatch.createdToast)
       onCreated?.()
     } catch (err) {
       setSubmitError(normalizeError(err).detail)
@@ -103,16 +105,16 @@ export function CreateBatchDialog({
         {!created ? (
           <>
             <DialogHeader>
-              <DialogTitle>Create Harvest Batch</DialogTitle>
+              <DialogTitle>{t.createBatch.title}</DialogTitle>
               <DialogDescription>
-                Register a harvested honey lot. Purity screening and the harvest traceability record are created automatically.
+                {t.createBatch.desc}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <div className="space-y-2">
-                <Label>Hive</Label>
+                <Label>{t.createBatch.hive}</Label>
                 <Select value={hiveId} onValueChange={setHiveId}>
-                  <SelectTrigger><SelectValue placeholder="Select a hive" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t.createBatch.hivePh} /></SelectTrigger>
                   <SelectContent>
                     {hives.map((h) => (
                       <SelectItem key={h.id} value={h.id}>{h.name} — {h.location}</SelectItem>
@@ -123,68 +125,68 @@ export function CreateBatchDialog({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cb-type">Honey Type</Label>
-                  <Input id="cb-type" placeholder="Wildflower" value={honeyType} onChange={(e) => setHoneyType(e.target.value)} />
+                  <Label htmlFor="cb-type">{t.createBatch.honeyType}</Label>
+                  <Input id="cb-type" placeholder={t.createBatch.honeyTypePh} value={honeyType} onChange={(e) => setHoneyType(e.target.value)} />
                   {errors.honeyType && <p className="text-xs text-destructive">{errors.honeyType}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cb-qty">Quantity (kg)</Label>
-                  <Input id="cb-qty" type="number" inputMode="decimal" step="0.1" min={0} placeholder="25" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+                  <Label htmlFor="cb-qty">{t.createBatch.qty}</Label>
+                  <Input id="cb-qty" type="number" inputMode="decimal" step="0.1" min={0} placeholder={t.createBatch.qtyPh} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
                   {errors.quantity && <p className="text-xs text-destructive">{errors.quantity}</p>}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cb-loc">Apiary Location</Label>
-                <Input id="cb-loc" placeholder="Village, District" value={location} onChange={(e) => setLocation(e.target.value)} />
+                <Label htmlFor="cb-loc">{t.createBatch.location}</Label>
+                <Input id="cb-loc" placeholder={t.createBatch.locationPh} value={location} onChange={(e) => setLocation(e.target.value)} />
                 {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cb-moist">Moisture (%)</Label>
-                <Input id="cb-moist" type="number" inputMode="decimal" step="0.1" min={0} max={100} placeholder="18" value={moisture} onChange={(e) => setMoisture(e.target.value)} />
+                <Label htmlFor="cb-moist">{t.createBatch.moisture}</Label>
+                <Input id="cb-moist" type="number" inputMode="decimal" step="0.1" min={0} max={100} placeholder={t.createBatch.moisturePh} value={moisture} onChange={(e) => setMoisture(e.target.value)} />
                 {errors.moisture && <p className="text-xs text-destructive">{errors.moisture}</p>}
-                <p className="text-xs text-muted-foreground">Purity screening uses the BIS/Codex threshold of ≤ 20% moisture. This is a screening check, not a laboratory certification.</p>
+                <p className="text-xs text-muted-foreground">{t.createBatch.moistureHint}</p>
               </div>
               {submitError && (
                 <Alert variant="destructive"><AlertDescription>{submitError}</AlertDescription></Alert>
               )}
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-                <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create Batch"}</Button>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>{t.createBatch.cancel}</Button>
+                <Button type="submit" disabled={saving}>{saving ? t.createBatch.creating : t.createBatch.create}</Button>
               </DialogFooter>
             </form>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Harvest batch created</DialogTitle>
-              <DialogDescription>Your honey lot is registered with an initial harvest traceability record.</DialogDescription>
+              <DialogTitle>{t.createBatch.doneTitle}</DialogTitle>
+              <DialogDescription>{t.createBatch.doneDesc}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 rounded-lg border p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Batch ID</span>
+                <span className="text-sm text-muted-foreground">{t.createBatch.fBatchId}</span>
                 <span className="font-mono font-semibold" title={created.batch_id}>{shortId(created.batch_id)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Purity Score</span>
+                <span className="text-sm text-muted-foreground">{t.createBatch.fPurity}</span>
                 <span className="font-semibold">{created.purity_score}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Purity Screening</span>
+                <span className="text-sm text-muted-foreground">{t.createBatch.fScreening}</span>
                 <PurityBadge status={created.purity_status} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
+                <span className="text-sm text-muted-foreground">{t.createBatch.fStatus}</span>
                 <span className="text-sm font-medium">{created.status}</span>
               </div>
             </div>
             <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="outline" asChild>
-                <Link href={`/verify/${created.batch_id}`} target="_blank">View Verification</Link>
+                <Link href={`/verify/${created.batch_id}`} target="_blank">{t.createBatch.viewVerification}</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href={`/dashboard/batches/${created.batch_id}`}>Open Batch</Link>
+                <Link href={`/dashboard/batches/${created.batch_id}`}>{t.createBatch.openBatch}</Link>
               </Button>
-              <Button onClick={() => onOpenChange(false)}>Done</Button>
+              <Button onClick={() => onOpenChange(false)}>{t.createBatch.done}</Button>
             </DialogFooter>
           </>
         )}

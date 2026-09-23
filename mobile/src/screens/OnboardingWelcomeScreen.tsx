@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -13,8 +12,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/button';
-import { useColor } from '@/hooks/useColor';
+import { AvoidKeyboard } from '@/components/ui/avoid-keyboard';
+import { Input } from '@/components/ui/input';
+import { InputOTP } from '@/components/ui/input-otp';
 import { authAPI, setToken } from '../api/client';
+
+function formatIndianPhone(value: string) {
+  const digits = value.replace(/\D/g, '');
+  if (digits.startsWith('91') && digits.length === 12) return `+${digits}`;
+  return `+91${digits.replace(/^0/, '').slice(-10)}`;
+}
 
 interface OnboardingWelcomeScreenProps {
   onBack: () => void;
@@ -48,7 +55,7 @@ function LoginScreen({ onBack, onCreateAccount, onAuthenticated }: OnboardingWel
     setError('');
     setLoading(true);
     try {
-      const response = await authAPI.login(phone.trim(), password);
+      const response = await authAPI.login(formatIndianPhone(phone), password);
       await setToken(response.data.access_token);
       onAuthenticated();
     } catch (requestError) {
@@ -60,20 +67,27 @@ function LoginScreen({ onBack, onCreateAccount, onAuthenticated }: OnboardingWel
 
   return (
     <ScreenShell onBack={onBack} step={1}>
-      <Text style={styles.eyebrow}>FOR BEEKEEPERS</Text>
-      <Text style={styles.title}>Welcome back</Text>
-      <Text style={styles.subtitle}>Sign in to manage your hives and honey batches.</Text>
+      <View style={styles.loginLayout}>
+        <View>
+          <Text style={styles.eyebrow}>FOR BEEKEEPERS</Text>
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>Sign in to manage your hives and honey batches.</Text>
 
-      <View style={styles.form}>
-        <FormInput label="Phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" />
-        <FormInput label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button variant="outline" size="lg" style={styles.fullButton} onPress={onCreateAccount}>
-          Create a new account
-        </Button>
-        <Button size="lg" style={styles.fullButton} onPress={signIn} loading={loading}>
-          Sign in
-        </Button>
+          <View style={styles.loginInputs}>
+            <FormInput label="Phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" />
+            <FormInput label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+          </View>
+        </View>
+
+        <View style={styles.loginActions}>
+          <Button animation={false} size="lg" style={styles.fullButton} onPress={signIn} loading={loading}>
+            Sign in
+          </Button>
+          <Button variant="link" onPress={onCreateAccount}>
+            Create a new account
+          </Button>
+        </View>
       </View>
     </ScreenShell>
   );
@@ -126,14 +140,15 @@ function RegisterFlow({ onBack, onAuthenticated }: { onBack: () => void; onAuthe
     setError('');
     setLoading(true);
     try {
+      const formattedPhone = formatIndianPhone(phone);
       await authAPI.register({
         name: name.trim(),
-        phone: phone.trim(),
+        phone: formattedPhone,
         email: email.trim(),
         password,
         role: 'beekeeper',
       });
-      const loginResponse = await authAPI.login(phone.trim(), password);
+      const loginResponse = await authAPI.login(formattedPhone, password);
       await setToken(loginResponse.data.access_token);
       onAuthenticated();
     } catch (requestError) {
@@ -162,7 +177,12 @@ function RegisterFlow({ onBack, onAuthenticated }: { onBack: () => void; onAuthe
     2: {
       title: 'Verify your number',
       subtitle: `Demo code: ${demoOtp}`,
-      field: <FormInput label="One-time code" value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} />,
+      field: (
+        <View>
+          <Text style={styles.inputLabel}>One-time code</Text>
+          <InputOTP length={6} value={otp} onChangeText={setOtp} containerStyle={styles.otpInput} slotStyle={styles.otpSlot} />
+        </View>
+      ),
       action: verifyOtp,
       button: 'Verify code',
     },
@@ -184,15 +204,21 @@ function RegisterFlow({ onBack, onAuthenticated }: { onBack: () => void; onAuthe
 
   return (
     <ScreenShell onBack={goBack} step={step}>
-      <Text style={styles.eyebrow}>CREATE ACCOUNT</Text>
-      <Text style={styles.title}>{stepContent.title}</Text>
-      <Text style={styles.subtitle}>{stepContent.subtitle}</Text>
-      <View style={styles.form}>
-        {stepContent.field}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button size="lg" style={styles.fullButton} onPress={stepContent.action} loading={loading}>
-          {stepContent.button}
-        </Button>
+      <View style={styles.registerLayout}>
+        <View>
+          <Text style={styles.eyebrow}>CREATE ACCOUNT</Text>
+          <Text style={styles.title}>{stepContent.title}</Text>
+          <Text style={styles.subtitle}>{stepContent.subtitle}</Text>
+          <View style={styles.registerInputs}>
+            {stepContent.field}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+          </View>
+        </View>
+        <View style={styles.registerActions}>
+          <Button animation={false} size="lg" style={styles.fullButton} onPress={stepContent.action} loading={loading}>
+            {stepContent.button}
+          </Button>
+        </View>
       </View>
     </ScreenShell>
   );
@@ -201,36 +227,29 @@ function RegisterFlow({ onBack, onAuthenticated }: { onBack: () => void; onAuthe
 function ScreenShell({ children, onBack, step }: { children: React.ReactNode; onBack: () => void; step: number }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.keyboard}>
         <View style={styles.nav}>
           <TouchableOpacity style={styles.backButton} onPress={onBack} accessibilityRole="button" accessibilityLabel="Go back">
-            <ChevronLeft size={24} color="#171717" strokeWidth={2.2} />
+            <ChevronLeft size={24} color="#FFFFFF" strokeWidth={2.2} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
+          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" accessibilityLabel="HoneyChain logo" />
           <Text style={styles.step}>Step {step} of 4</Text>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {children}
+          <AvoidKeyboard />
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
 
 function FormInput({ label, ...props }: React.ComponentProps<typeof TextInput> & { label: string }) {
-  const card = useColor('card');
-  const border = useColor('border');
-  const text = useColor('text');
-  const muted = useColor('textMuted');
   return (
     <View>
       <Text style={styles.inputLabel}>{label}</Text>
-      <TextInput
-        {...props}
-        style={[styles.input, { backgroundColor: card, borderColor: border, color: text }]}
-        placeholderTextColor={muted}
-        selectionColor={text}
-      />
+      <Input variant="outline" placeholder={label} inputStyle={styles.inputText} {...props} />
     </View>
   );
 }
@@ -244,7 +263,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  safe: { flex: 1, backgroundColor: '#000000' },
   keyboard: { flex: 1 },
   nav: {
     height: 52,
@@ -254,16 +273,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backButton: { minWidth: 76, flexDirection: 'row', alignItems: 'center', marginLeft: -8 },
-  backText: { color: '#171717', fontFamily: 'Geist_500Medium', fontSize: 16 },
-  step: { color: '#6B7280', fontFamily: 'Geist_500Medium', fontSize: 14 },
+  backText: { color: '#FFFFFF', fontFamily: 'Geist_500Medium', fontSize: 16 },
+  step: { color: '#A1A1AA', fontFamily: 'Geist_500Medium', fontSize: 14 },
+  logo: { width: 34, height: 34 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 36, paddingBottom: 32 },
-  eyebrow: { color: '#6E813E', fontFamily: 'Geist_700Bold', fontSize: 12, letterSpacing: 1.3 },
-  title: { color: '#171717', fontFamily: 'Geist_700Bold', fontSize: 32, marginTop: 10 },
-  subtitle: { color: '#687068', fontFamily: 'Geist_400Regular', fontSize: 16, lineHeight: 23, marginTop: 10 },
-  form: { marginTop: 36, gap: 16 },
+  eyebrow: { color: '#A3C44A', fontFamily: 'Geist_700Bold', fontSize: 12, letterSpacing: 1.3 },
+  title: { color: '#FFFFFF', fontFamily: 'Geist_700Bold', fontSize: 32, marginTop: 10 },
+  subtitle: { color: '#A1A1AA', fontFamily: 'Geist_400Regular', fontSize: 16, lineHeight: 23, marginTop: 10 },
+  loginLayout: { flex: 1 },
+  loginInputs: { marginTop: 24, gap: 16 },
+  loginActions: { marginTop: 'auto', width: '100%', gap: 16, alignItems: 'stretch' },
+  registerLayout: { flex: 1 },
+  registerInputs: { marginTop: 24, gap: 16 },
+  registerActions: { marginTop: 'auto', paddingTop: 24, width: '100%' },
   inputGroup: { gap: 16 },
-  inputLabel: { color: '#30352E', fontFamily: 'Geist_500Medium', fontSize: 14, marginBottom: 8 },
-  input: { height: 54, borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, fontFamily: 'Geist_400Regular', fontSize: 16 },
+  inputLabel: { color: '#E4E4E7', fontFamily: 'Geist_500Medium', fontSize: 14, marginBottom: 8 },
+  inputText: { textAlign: 'left' },
   fullButton: { width: '100%', borderRadius: 14 },
-  error: { color: '#C62828', fontFamily: 'Geist_400Regular', fontSize: 14, lineHeight: 20 },
+  otpInput: { width: '100%' },
+  otpSlot: { flex: 1, width: undefined, height: 54 },
+  error: { color: '#FF6B6B', fontFamily: 'Geist_400Regular', fontSize: 14, lineHeight: 20 },
 });

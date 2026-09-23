@@ -21,6 +21,7 @@ import {
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts"
+import { useI18n } from "@/lib/i18n/context"
 
 const HEALTH_COLORS: Record<string, string> = {
   HEALTHY: "#16a34a",
@@ -29,6 +30,7 @@ const HEALTH_COLORS: Record<string, string> = {
 }
 
 export default function AnalyticsPage() {
+  const { t } = useI18n()
   const [hives, setHives] = React.useState<Hive[]>([])
   const [healthList, setHealthList] = React.useState<{ hive: Hive; health: HiveHealthResponse | null }[]>([])
   const [batches, setBatches] = React.useState<Batch[]>([])
@@ -79,9 +81,9 @@ export default function AnalyticsPage() {
   }, [healthList])
 
   const distChart = [
-    { name: "Healthy", value: dist.healthy, color: HEALTH_COLORS.HEALTHY },
-    { name: "Watch", value: dist.watch, color: HEALTH_COLORS.WATCH },
-    { name: "High Risk", value: dist.high, color: HEALTH_COLORS.HIGH_RISK },
+    { name: t.analytics.healthy, value: dist.healthy, color: HEALTH_COLORS.HEALTHY },
+    { name: t.analytics.watch, value: dist.watch, color: HEALTH_COLORS.WATCH },
+    { name: t.analytics.highRisk, value: dist.high, color: HEALTH_COLORS.HIGH_RISK },
   ].filter((d) => d.value > 0)
 
   const production = React.useMemo(() => {
@@ -98,14 +100,14 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-        <p className="text-sm text-muted-foreground">Hive health, productivity and historical production. Backend metrics are shown as provided; batch totals are computed in the dashboard and labelled as such.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.analytics.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.analytics.subtitle}</p>
       </div>
 
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Unable to load analytics</AlertTitle>
-          <AlertDescription className="flex items-center gap-2">{error} <Button size="sm" variant="outline" onClick={load}>Retry</Button></AlertDescription>
+          <AlertTitle>{t.analytics.loadFail}</AlertTitle>
+          <AlertDescription className="flex items-center gap-2">{error} <Button size="sm" variant="outline" onClick={load}>{t.common.retry}</Button></AlertDescription>
         </Alert>
       )}
 
@@ -113,12 +115,12 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Hive Health Distribution</CardTitle>
-            <CardDescription>From the hive health endpoint for your hives.</CardDescription>
+            <CardTitle>{t.analytics.healthDist}</CardTitle>
+            <CardDescription>{t.analytics.healthDistDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-56 w-full" /> : distChart.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No sensor readings yet. Record the first reading to begin hive health analysis.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{t.analytics.emptyHealth}</p>
             ) : (
               <>
                 <div className="h-56">
@@ -132,10 +134,10 @@ export default function AnalyticsPage() {
                   </ResponsiveContainer>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                  <span>Healthy: <strong>{dist.healthy}</strong></span>
-                  <span>Watch: <strong>{dist.watch}</strong></span>
-                  <span>High Risk: <strong>{dist.high}</strong></span>
-                  {dist.unknown > 0 && <span className="text-muted-foreground">No data: {dist.unknown}</span>}
+                  <span>{t.analytics.healthy}: <strong>{dist.healthy}</strong></span>
+                  <span>{t.analytics.watch}: <strong>{dist.watch}</strong></span>
+                  <span>{t.analytics.highRisk}: <strong>{dist.high}</strong></span>
+                  {dist.unknown > 0 && <span className="text-muted-foreground">{t.analytics.noDataLbl}: {dist.unknown}</span>}
                 </div>
               </>
             )}
@@ -145,18 +147,18 @@ export default function AnalyticsPage() {
         {/* Honey production (frontend aggregation) */}
         <Card>
           <CardHeader>
-            <CardTitle>Honey Production</CardTitle>
-            <CardDescription>Dashboard aggregation from your batches (not a backend metric).</CardDescription>
+            <CardTitle>{t.analytics.production}</CardTitle>
+            <CardDescription>{t.analytics.productionDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-56 w-full" /> : batches.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No honey batches yet. Create a harvest batch after harvesting.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{t.analytics.emptyBatches}</p>
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-4 text-center">
-                  <div><div className="text-2xl font-bold">{production.totalQty.toFixed(1)} kg</div><div className="text-xs text-muted-foreground">Total harvested</div></div>
-                  <div><div className="text-2xl font-bold">{production.count}</div><div className="text-xs text-muted-foreground">Batches</div></div>
-                  <div><div className="text-2xl font-bold">{production.avgPurity != null ? production.avgPurity.toFixed(1) : "—"}</div><div className="text-xs text-muted-foreground">Avg purity score</div></div>
+                  <div><div className="text-2xl font-bold">{production.totalQty.toFixed(1)} kg</div><div className="text-xs text-muted-foreground">{t.analytics.totalHarvested}</div></div>
+                  <div><div className="text-2xl font-bold">{production.count}</div><div className="text-xs text-muted-foreground">{t.analytics.batchesLbl}</div></div>
+                  <div><div className="text-2xl font-bold">{production.avgPurity != null ? production.avgPurity.toFixed(1) : "—"}</div><div className="text-xs text-muted-foreground">{t.analytics.avgPurity}</div></div>
                 </div>
                 {statusChart.length > 0 && (
                   <div className="mt-4 h-44">
@@ -171,7 +173,7 @@ export default function AnalyticsPage() {
                     </ResponsiveContainer>
                   </div>
                 )}
-                <p className="mt-2 text-xs text-muted-foreground">Batch status distribution computed in the dashboard from your batch list.</p>
+                <p className="mt-2 text-xs text-muted-foreground">{t.analytics.statusNote}</p>
               </>
             )}
           </CardContent>
@@ -181,26 +183,26 @@ export default function AnalyticsPage() {
       {/* Productivity (backend source of truth) */}
       <Card>
         <CardHeader>
-          <CardTitle>Productivity</CardTitle>
-          <CardDescription>Estimated yield, trend, confidence, next harvest and recommendation — provided by the backend health endpoint. Not calculated in the dashboard.</CardDescription>
+          <CardTitle>{t.analytics.productivity}</CardTitle>
+          <CardDescription>{t.analytics.productivityDesc}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-2">{[0, 1].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
           ) : hives.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Your apiary is empty. Add your first hive to start monitoring.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{t.analytics.emptyApiary}</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Hive</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Est. Yield</TableHead>
-                    <TableHead>Trend</TableHead>
-                    <TableHead>Confidence</TableHead>
-                    <TableHead>Next Harvest</TableHead>
-                    <TableHead>Recommendation</TableHead>
+                    <TableHead>{t.analytics.thHive}</TableHead>
+                    <TableHead>{t.analytics.thStatus}</TableHead>
+                    <TableHead>{t.analytics.thYield}</TableHead>
+                    <TableHead>{t.analytics.thTrend}</TableHead>
+                    <TableHead>{t.analytics.thConf}</TableHead>
+                    <TableHead>{t.analytics.thNext}</TableHead>
+                    <TableHead>{t.analytics.thRec}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -210,7 +212,7 @@ export default function AnalyticsPage() {
                         <Link href={`/dashboard/hives/${hive.id}`} className="hover:underline">{hive.name}</Link>
                       </TableCell>
                       <TableCell>
-                        {health ? <HealthBadge status={health.health.status} /> : <span className="text-xs text-muted-foreground">No data</span>}
+                        {health ? <HealthBadge status={health.health.status} /> : <span className="text-xs text-muted-foreground">{t.analytics.noDataLbl}</span>}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {health?.productivity?.yield_estimate_kg != null ? `${health.productivity.yield_estimate_kg} kg` : "—"}
@@ -220,10 +222,10 @@ export default function AnalyticsPage() {
                         {health?.productivity ? `${Math.round(health.productivity.confidence * 100)}%` : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {health?.productivity?.next_harvest_days != null ? `~${health.productivity.next_harvest_days} days` : "—"}
+                        {health?.productivity?.next_harvest_days != null ? t.analytics.nextHarvestDays(health.productivity.next_harvest_days) : "—"}
                       </TableCell>
                       <TableCell className="max-w-64 text-xs text-muted-foreground">
-                        {health?.productivity?.recommendation ?? "Not enough readings to display a trend yet."}
+                        {health?.productivity?.recommendation ?? t.analytics.recEmpty}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -236,7 +238,7 @@ export default function AnalyticsPage() {
 
       <div className="flex flex-wrap gap-2">
         <BatchStatusBadge status="HARVESTED" />
-        <span className="text-xs text-muted-foreground self-center">Batch statuses above reflect backend batch records.</span>
+        <span className="text-xs text-muted-foreground self-center">{t.analytics.statusesNote}</span>
       </div>
     </div>
   )

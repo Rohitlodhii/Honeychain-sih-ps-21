@@ -9,20 +9,22 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Download, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
+import { useI18n } from "@/lib/i18n/context"
 
 export function QrSection({ batchId }: { batchId: string }) {
   const qrUrl = api.batches.qrUrl(batchId)
   const [failed, setFailed] = React.useState(false)
+  const { t } = useI18n()
 
   const download = async () => {
     try {
       const res = await fetch(qrUrl)
-      if (!res.ok) throw new Error("Unable to download QR code")
+      if (!res.ok) throw new Error(t.qr.downloadQrFail)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `honeychain-${batchId}-qr.png`
+      a.download = `beelink-${batchId}-qr.png`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -38,7 +40,7 @@ export function QrSection({ batchId }: { batchId: string }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={qrUrl}
-          alt="Batch verification QR code"
+          alt={t.qr.imgAlt}
           className="h-44 w-44 rounded-lg border bg-white p-2"
           onError={() => setFailed(true)}
         />
@@ -47,21 +49,21 @@ export function QrSection({ batchId }: { batchId: string }) {
       )}
       {failed && (
         <Alert variant="destructive">
-          <AlertDescription>Unable to load QR code. Please try again.</AlertDescription>
+          <AlertDescription>{t.qr.qrFail}</AlertDescription>
         </Alert>
       )}
       <div className="flex flex-wrap justify-center gap-2">
         <Button size="sm" variant="outline" onClick={download}>
-          <Download className="mr-1 h-3.5 w-3.5" /> Download / Print QR
+          <Download className="mr-1 h-3.5 w-3.5" /> {t.qr.downloadPrint}
         </Button>
         <Button size="sm" variant="outline" asChild>
           <Link href={`/verify/${batchId}`} target="_blank">
-            <ExternalLink className="mr-1 h-3.5 w-3.5" /> View Verification
+            <ExternalLink className="mr-1 h-3.5 w-3.5" /> {t.qr.viewVerification}
           </Link>
         </Button>
       </div>
       <p className="text-center text-xs text-muted-foreground">
-        Consumers can scan this QR code to open the public verification page. No login required.
+        {t.qr.scanHint}
       </p>
     </div>
   )
@@ -70,13 +72,14 @@ export function QrSection({ batchId }: { batchId: string }) {
 export function ComplianceDownloadButton({ batchId }: { batchId: string }) {
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const { t } = useI18n()
 
   const handle = async () => {
     setLoading(true)
     setError(null)
     try {
       await api.batches.downloadComplianceReport(batchId)
-      toast.success("Compliance report downloaded")
+      toast.success(t.qr.complianceDownloaded)
     } catch (err) {
       const msg = normalizeError(err).detail
       setError(msg)
@@ -90,7 +93,7 @@ export function ComplianceDownloadButton({ batchId }: { batchId: string }) {
     <div className="space-y-2">
       <Button onClick={handle} disabled={loading} className="w-full sm:w-auto">
         <Download className="mr-2 h-4 w-4" />
-        {loading ? "Preparing…" : "Download Compliance Report"}
+        {loading ? t.qr.preparing : t.qr.complianceBtn}
       </Button>
       {error && (
         <Alert variant="destructive">
@@ -98,7 +101,7 @@ export function ComplianceDownloadButton({ batchId }: { batchId: string }) {
         </Alert>
       )}
       <p className="text-xs text-muted-foreground">
-        HoneyChain Compliance Screening Report — a screening summary based on moisture and traceability records, not a laboratory certificate.
+        {t.qr.complianceNote}
       </p>
     </div>
   )

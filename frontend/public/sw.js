@@ -1,10 +1,10 @@
-/* HoneyChain service worker — app-shell + runtime caching.
+/* Beelink service worker — app-shell + runtime caching.
  * - Navigations: network-first, fall back to cache, then /offline.
  * - Same-origin static GET (/_next/static, /icons, images): stale-while-revalidate.
  * - API (/api/...) and cross-origin: network-only, never cached (auth/ledger traffic).
  */
 
-const VERSION = 'honeychain-v2'
+const VERSION = 'beelink-v2'
 const APP_SHELL = ['/', '/offline', '/manifest.webmanifest']
 
 self.addEventListener('install', (event) => {
