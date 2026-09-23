@@ -2,8 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { authAPI } from '@/lib/api'
 import Link from 'next/link'
+import { motion } from 'motion/react'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
+
+const SIMPLE_INPUT_CLASS =
+  'shadow-none outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input active:outline-none'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -29,7 +40,9 @@ export default function LoginPage() {
     // (Read via window.location to avoid a Suspense boundary for useSearchParams.)
     try {
       if (typeof window !== 'undefined' && window.location.search.includes('registered=1')) {
-        setNotice('Account created! Sign in with your phone number and password.')
+        const message = 'Account created! Sign in with your phone number and password.'
+        setNotice(message)
+        toast.success(message)
       }
     } catch {
       // ignore
@@ -41,100 +54,146 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
+    // NOTE: login API accepts only { phone, password } — no entity/role
+    // field (backend/app/schemas.py UserLoginRequest). The role comes back
+    // on the user object, so we route farmers -> /dashboard and
+    // cooperatives -> /admin after login instead of asking upfront.
     try {
       const response = await authAPI.login(phone, password)
       localStorage.setItem('token', response.data.access_token)
-      router.push('/dashboard')
+      const role = response.data?.user?.role
+      toast.success('Signed in successfully!')
+      router.push(role === 'cooperative_admin' ? '/admin' : '/dashboard')
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed. Check your credentials.')
+      const message = err.response?.data?.detail || 'Login failed. Check your credentials.'
+      setError(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-espresso via-surface to-espresso flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-honey rounded transform rotate-45"></div>
-            <span className="text-3xl font-serif font-bold text-honey">HoneyChain</span>
-          </Link>
-          <h1 className="text-2xl font-serif font-bold text-cream">
-            Welcome Back
-          </h1>
-        </div>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6 font-sans">
+      <Card className="w-full max-w-4xl overflow-hidden p-0 grid grid-cols-1 md:grid-cols-2">
+        {/* Left — form side */}
+        <div className="flex min-h-[480px] flex-col p-6 sm:p-8 md:min-h-[560px]">
+          {/* Top row: brand */}
+          <div className="flex items-start justify-between">
+            <span className="text-lg font-semibold tracking-tight">
+              beelink
+            </span>
+          </div>
 
-        {/* Card */}
-        <div className="card mb-6">
-          <form onSubmit={handleLogin} className="space-y-4">
-            {/* Success notice (e.g. after registration) */}
+          {/* Heading */}
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
+            Welcome back
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sign in with your phone number and password
+          </p>
+
+          {/* Fields — just below the subtitle, empty space left in the middle */}
+          <div className="flex flex-1 flex-col justify-start gap-4 mt-4 pb-6">
             {notice && (
-              <div role="status" className="p-3 bg-sage/20 border border-sage/50 text-sage rounded-lg text-sm">
+              <div
+                role="status"
+                className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm"
+              >
                 {notice}
               </div>
             )}
-
-            {/* Error Message — React auto-escapes, so render as text (no manual escapeHtml) */}
             {error && (
-              <div role="alert" className="p-3 bg-brick/20 border border-brick/50 text-brick rounded-lg text-sm">
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
                 {error}
               </div>
             )}
 
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-semibold text-honey mb-2">Phone Number</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
-                className="input-field"
-                placeholder="+91 XXXXX XXXXX"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-semibold text-honey mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                className="input-field"
-                placeholder="Enter a strong password"
-                required
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            <motion.div
+              initial={{ opacity: 0, y: 14, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-              {loading ? 'Processing...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Link to Register */}
-          <div className="mt-6 pt-6 border-t border-honey/20 text-center">
-            <p className="text-cream/80 mb-3">
-              Don&apos;t have an account?
-            </p>
-            <Link href="/register" className="btn-secondary w-full inline-block">
-              Create Account
-            </Link>
+              <form
+                id="login-form"
+                onSubmit={handleLogin}
+                className="space-y-4"
+              >
+                <div className="space-y-4">
+                  <Label htmlFor="login-phone">Mobile number</Label>
+                  <Input
+                    id="login-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="+91 XXXXX XXXXX"
+                    value={phone}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setPhone(e.target.value)
+                    }
+                    required
+                    className={SIMPLE_INPUT_CLASS}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="login-password">Password</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setPassword(e.target.value)
+                    }
+                    required
+                    className={SIMPLE_INPUT_CLASS}
+                  />
+                </div>
+              </form>
+            </motion.div>
           </div>
+
+          {/* Primary action — above the separator */}
+          <div className="pb-4">
+            <Button
+              type="submit"
+              form="login-form"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </div>
+
+          <Separator className="my-4" />
+
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link
+              href="/register"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Create account
+            </Link>
+          </p>
         </div>
 
-        {/* Disclaimer */}
-        <p className="text-center text-cream/60 text-xs">
-          HoneyChain is built for KVIC&apos;s Honey Mission. Your data is protected and shared only within the cooperative network.
-        </p>
-      </div>
+        {/* Right — image side (hidden on small screens, form only) */}
+        <div className="relative hidden min-h-[560px] md:block">
+          <Image
+            src="/images/login.png"
+            alt="Beekeeper holding a honeycomb"
+            fill
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 0vw, 50vw"
+          />
+        </div>
+      </Card>
     </div>
   )
 }

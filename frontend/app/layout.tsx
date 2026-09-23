@@ -1,21 +1,9 @@
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Inter } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import ServiceWorkerRegister from '@/components/sw-register'
-
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  variable: '--font-fraunces',
-  display: 'swap',
-})
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-inter',
-  display: 'swap',
-})
+import { Toaster } from '@/components/ui/sonner'
 
 export const metadata: Metadata = {
   title: 'HoneyChain - Honey Traceability & Beekeeping',
@@ -56,9 +44,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
-      <body className="bg-espresso text-cream font-sans">
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className="bg-background text-foreground font-sans antialiased">
         {children}
+        <Toaster position="top-center" richColors closeButton />
         <ServiceWorkerRegister />
       </body>
     </html>

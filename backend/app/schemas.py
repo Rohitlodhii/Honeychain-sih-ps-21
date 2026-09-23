@@ -94,7 +94,9 @@ class SensorReadingCreateRequest(BaseModel):
 
 class BatchCreateRequest(BaseModel):
     """Request to create a new batch (harvest)."""
-    hive_id: str
+    # Optional to stay compatible with older dashboard builds that omit it;
+    # main.py falls back to the caller's hive when it is missing/blank.
+    hive_id: Optional[str] = Field(None, description="Hive to harvest from; defaults to caller's hive when omitted")
     honey_type: str  # e.g., "wildflower", "acacia"
     quantity_kg: float
     apiary_location: str

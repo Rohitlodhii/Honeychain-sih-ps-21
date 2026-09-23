@@ -1,113 +1,191 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { authAPI } from '@/lib/api'
+import Image from 'next/image'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'motion/react'
+import { authAPI } from '@/lib/api'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { toast } from 'sonner'
 
-type Role = 'beekeeper' | 'cooperative_admin'
+const SIMPLE_INPUT_CLASS =
+  'shadow-none outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input active:outline-none'
+
+const TOTAL_STEPS = 5
+
+type EntityRole = 'beekeeper' | 'cooperative_admin'
+
+const ENTITY_OPTIONS: { value: EntityRole; label: string; hint: string }[] = [
+  { value: 'beekeeper', label: 'Farmer / Beekeeper', hint: 'Manage hives & harvests' },
+  { value: 'cooperative_admin', label: 'Cooperative', hint: 'KVIC cluster admin' },
+]
+
+const STEP_SUBTITLES = [
+  'Select your entity',
+  'Enter your mobile number',
+  'Enter the verification code',
+  'Tell us about yourself',
+  'Set your password',
+]
 
 export default function RegisterPage() {
   const router = useRouter()
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [name, setName] = useState('')
+  const [step, setStep] = useState(1)
+  const [entity, setEntity] = useState<EntityRole | ''>('')
   const [phone, setPhone] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [role, setRole] = useState<Role>('beekeeper')
-  const [cluster, setCluster] = useState('')
+  const [otp, setOtp] = useState('')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [adminInviteCode, setAdminInviteCode] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    // Already logged in -> go to dashboard
     try {
       const token = localStorage.getItem('token')
-      if (token) {
-        router.replace('/dashboard')
-      }
+      if (token) router.replace('/dashboard')
     } catch {
-      // localStorage unavailable (private mode) — stay on register
+      // stay on register when storage is unavailable
     }
   }, [router])
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const goTo = (next: number) => {
+    setError('')
+    setStep(next)
+  }
+
+  const fail = (message: string) => {
+    setError(message)
+    toast.error(message)
+  }
+
+  const handleEntityContinue = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!entity) {
+      fail('Please select your entity to continue.')
+      return
+    }
+    goTo(2)
+  }
+
+  const handlePhoneContinue = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = phone.trim()
+    if (trimmed.replace(/\D/g, '').length < 10) {
+      fail('Please enter a valid 10-digit mobile number.')
+      return
+    }
+    goTo(3)
+  }
+
+  const handleOtpVerify = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (otp.length < 4) {
+      fail('Please enter the 4-digit OTP.')
+      return
+    }
+    goTo(4)
+  }
+
+  const handleProfileContinue = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) {
+      fail('Please enter your full name.')
+      return
+    }
+    const trimmedEmail = email.trim()
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      fail('Please enter a valid email address (or leave it blank).')
+      return
+    }
+    if (entity === 'cooperative_admin' && !adminInviteCode.trim()) {
+      fail('Please enter your cooperative-admin invite code.')
+      return
+    }
+    goTo(5)
+  }
+
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    const trimmedName = name.trim()
-    const trimmedPhone = phone.trim()
-    const trimmedCluster = cluster.trim()
-    const trimmedEmail = email.trim()
-
-    if (!trimmedName) {
-      setError('Please enter your full name.')
-      return
-    }
-    if (!trimmedPhone) {
-      setError('Please enter your phone number.')
+    if (!entity) {
+      fail('Please select your entity first.')
+      goTo(1)
       return
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters.')
+      fail('Password must be at least 6 characters.')
       return
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-    if (role === 'cooperative_admin' && !adminInviteCode.trim()) {
-      setError('Admin invite code is required for cooperative admins.')
-      return
-    }
-    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError('Please enter a valid email address (or leave it blank).')
+      fail('Passwords do not match.')
       return
     }
 
-    setLoading(true)
+    setSubmitting(true)
     try {
       const payload: {
         name: string
         phone: string
         password: string
-        role: Role
-        cluster?: string
+        role: 'beekeeper' | 'cooperative_admin'
         email?: string
         admin_invite_code?: string
       } = {
-        name: trimmedName,
-        phone: trimmedPhone,
+        name: name.trim(),
+        phone: phone.trim(),
         password,
-        role,
+        role: entity,
       }
-      if (trimmedCluster) payload.cluster = trimmedCluster
-      if (trimmedEmail) payload.email = trimmedEmail
-      if (role === 'cooperative_admin') payload.admin_invite_code = adminInviteCode.trim()
+      if (email.trim()) payload.email = email.trim()
+      if (entity === 'cooperative_admin')
+        payload.admin_invite_code = adminInviteCode.trim()
 
       await authAPI.register(payload)
 
-      // Register returns no token — log the user in immediately for a
-      // smooth "Get Started" flow, fall back to /login on failure.
+      toast.success('Account created! Signing you in…')
       try {
-        const loginRes = await authAPI.login(trimmedPhone, password)
+        const loginRes = await authAPI.login(phone.trim(), password)
         localStorage.setItem('token', loginRes.data.access_token)
-        router.push('/dashboard')
+        const role = loginRes.data?.user?.role
+        router.push(role === 'cooperative_admin' ? '/admin' : '/dashboard')
       } catch {
         router.push('/login?registered=1')
       }
     } catch (err: unknown) {
-      // FastAPI returns { detail: string } on 400 (duplicate phone / bad invite)
       let message = 'Registration failed. Please try again.'
       if (typeof err === 'object' && err !== null && 'response' in err) {
-        const resp = (err as { response?: { data?: { detail?: unknown } } }).response
+        const resp = (err as { response?: { data?: { detail?: unknown } } })
+          .response
         const detail = resp?.data?.detail
         if (typeof detail === 'string' && detail) message = detail
         else if (Array.isArray(detail)) {
-          // Pydantic validation errors: [{ loc, msg, ... }]
-          const first = detail[0] as { msg?: string; loc?: (string | number)[] } | undefined
+          const first = detail[0] as
+            | { msg?: string; loc?: (string | number)[] }
+            | undefined
           if (first?.msg) {
             const field = first.loc ? String(first.loc[first.loc.length - 1]) : ''
             message = field ? `${field}: ${first.msg}` : first.msg
@@ -116,201 +194,399 @@ export default function RegisterPage() {
       } else if (err instanceof Error && !navigator.onLine) {
         message = 'You appear to be offline. Connect to the internet to create your account.'
       }
-      setError(message)
+      fail(message)
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-espresso via-surface to-espresso flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-honey rounded transform rotate-45" aria-hidden />
-            <span className="text-3xl font-serif font-bold text-honey">HoneyChain</span>
-          </Link>
-          <h1 className="text-2xl font-serif font-bold text-cream">Create your account</h1>
-          <p className="text-cream/70 text-sm mt-2">
-            Join as a beekeeper or a KVIC cooperative admin.
-          </p>
-        </div>
+  const progressDeg = (step / TOTAL_STEPS) * 360
 
-        {/* Card */}
-        <div className="card mb-6">
-          <form onSubmit={handleRegister} className="space-y-4" noValidate>
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6 font-sans">
+      <Card className="w-full max-w-4xl overflow-hidden p-0 grid grid-cols-1 md:grid-cols-2">
+        {/* Left — form side */}
+        <div className="flex min-h-[480px] flex-col p-6 sm:p-8 md:min-h-[560px]">
+          {/* Top row: brand left, progress disc + counter right */}
+          <div className="flex items-start justify-between">
+            <span className="text-lg font-semibold tracking-tight">
+              beelink
+            </span>
+            <div
+              className="flex shrink-0 items-center gap-2"
+              aria-label={`Step ${step} of ${TOTAL_STEPS}`}
+            >
+              <span
+                aria-hidden
+                className="flex h-6 w-6 items-center justify-center rounded-full"
+                style={{
+                  background: `conic-gradient(hsl(var(--primary)) ${progressDeg}deg, hsl(var(--muted)) ${progressDeg}deg)`,
+                }}
+              >
+                <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-card" />
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {step} of {TOTAL_STEPS}
+              </span>
+            </div>
+          </div>
+
+          {/* Heading */}
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl">
+            Create new account
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {STEP_SUBTITLES[step - 1]}
+          </p>
+
+          {/* Fields — just below the subtitle, empty space left in the middle */}
+          <div className="flex flex-1 flex-col justify-start gap-4 mt-4 pb-6">
             {error && (
-              <div role="alert" className="p-3 bg-brick/20 border border-brick/50 text-brick rounded-lg text-sm">
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
                 {error}
               </div>
             )}
 
-            {/* Name */}
-            <div>
-              <label htmlFor="register-name" className="block text-sm font-semibold text-honey mb-2">
-                Full Name
-              </label>
-              <input
-                id="register-name"
-                type="text"
-                value={name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                className="input-field"
-                placeholder="e.g. Ramesh Kumar"
-                autoComplete="name"
-                required
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label htmlFor="register-phone" className="block text-sm font-semibold text-honey mb-2">
-                Phone Number
-              </label>
-              <input
-                id="register-phone"
-                type="tel"
-                value={phone}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
-                className="input-field"
-                placeholder="+91 XXXXX XXXXX"
-                autoComplete="tel"
-                required
-              />
-              <p className="text-xs text-cream/60 mt-1">You will use this phone number to sign in.</p>
-            </div>
-
-            {/* Role */}
-            <div>
-              <label htmlFor="register-role" className="block text-sm font-semibold text-honey mb-2">
-                I am joining as
-              </label>
-              <select
-                id="register-role"
-                value={role}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  setRole(e.target.value as Role)
-                }
-                className="input-field"
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, y: 14, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -10, filter: 'blur(6px)' }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
               >
-                <option value="beekeeper">Beekeeper</option>
-                <option value="cooperative_admin">Cooperative Admin (KVIC)</option>
-              </select>
-            </div>
+                {step === 1 && (
+                  <form
+                    id="register-step-1"
+                    onSubmit={handleEntityContinue}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-4">
+                      <Label htmlFor="register-entity">Entity</Label>
+                      <Select
+                        value={entity}
+                        onValueChange={(value) => {
+                          setError('')
+                          setEntity(value as EntityRole)
+                        }}
+                      >
+                        <SelectTrigger
+                          id="register-entity"
+                          className="shadow-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        >
+                          <SelectValue placeholder="Select entity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Entity</SelectLabel>
+                            {ENTITY_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      {entity && (
+                        <p className="text-xs text-muted-foreground">
+                          {
+                            ENTITY_OPTIONS.find((o) => o.value === entity)
+                              ?.hint
+                          }
+                        </p>
+                      )}
+                    </div>
+                  </form>
+                )}
 
-            {/* Cluster */}
-            <div>
-              <label htmlFor="register-cluster" className="block text-sm font-semibold text-honey mb-2">
-                Cluster / Village <span className="text-cream/50 font-normal">(optional)</span>
-              </label>
-              <input
-                id="register-cluster"
-                type="text"
-                value={cluster}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCluster(e.target.value)}
-                className="input-field"
-                placeholder="e.g. Bharatpur Cluster"
-                autoComplete="organization"
-              />
-            </div>
+                {step === 2 && (
+                  <form
+                    id="register-step-2"
+                    onSubmit={handlePhoneContinue}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-4">
+                      <Label htmlFor="register-phone">Mobile number</Label>
+                      <Input
+                        id="register-phone"
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="+91 XXXXX XXXXX"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                        className={SIMPLE_INPUT_CLASS}
+                      />
+                    </div>
+                  </form>
+                )}
 
-            {/* Email */}
-            <div>
-              <label htmlFor="register-email" className="block text-sm font-semibold text-honey mb-2">
-                Email <span className="text-cream/50 font-normal">(optional)</span>
-              </label>
-              <input
-                id="register-email"
-                type="email"
-                value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                className="input-field"
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-            </div>
+                {step === 3 && (
+                  <form
+                    id="register-step-3"
+                    onSubmit={handleOtpVerify}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-4">
+                      <Label>
+                        OTP sent to {phone.trim() || 'your mobile'}
+                      </Label>
+                      <InputOTP
+                        maxLength={4}
+                        value={otp}
+                        onChange={(value) => {
+                          setError('')
+                          setOtp(value)
+                        }}
+                      >
+                        <InputOTPGroup className="gap-2">
+                          {[0, 1, 2, 3].map((index) => (
+                            <InputOTPSlot
+                              key={index}
+                              index={index}
+                              className="h-8 w-8 rounded-md border text-sm shadow-none first:rounded-md last:rounded-md"
+                            />
+                          ))}
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                  </form>
+                )}
 
-            {/* Admin invite code (conditional) */}
-            {role === 'cooperative_admin' && (
-              <div>
-                <label htmlFor="register-invite" className="block text-sm font-semibold text-honey mb-2">
-                  Admin Invite Code
-                </label>
-                <input
-                  id="register-invite"
-                  type="text"
-                  value={adminInviteCode}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setAdminInviteCode(e.target.value)
-                  }
-                  className="input-field"
-                  placeholder="Ask your KVIC coordinator"
-                  autoComplete="off"
-                  required={role === 'cooperative_admin'}
-                />
+                {step === 4 && (
+                  <form
+                    id="register-step-4"
+                    onSubmit={handleProfileContinue}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-4">
+                      <Label htmlFor="register-name">Full name</Label>
+                      <Input
+                        id="register-name"
+                        type="text"
+                        autoComplete="name"
+                        placeholder="e.g. Ramesh Kumar"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className={SIMPLE_INPUT_CLASS}
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <Label htmlFor="register-email">
+                        Email{' '}
+                        <span className="font-normal text-muted-foreground">
+                          (optional)
+                        </span>
+                      </Label>
+                      <Input
+                        id="register-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className={SIMPLE_INPUT_CLASS}
+                      />
+                    </div>
+                    {entity === 'cooperative_admin' && (
+                      <div className="space-y-4">
+                        <Label htmlFor="register-invite">
+                          Admin invite code
+                        </Label>
+                        <Input
+                          id="register-invite"
+                          type="text"
+                          autoComplete="off"
+                          placeholder="Enter cooperative invite code"
+                          value={adminInviteCode}
+                          onChange={(e) =>
+                            setAdminInviteCode(e.target.value)
+                          }
+                          required
+                          className={SIMPLE_INPUT_CLASS}
+                        />
+                      </div>
+                    )}
+                  </form>
+                )}
+
+                {step === 5 && (
+                  <form
+                    id="register-step-5"
+                    onSubmit={handleCreateAccount}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-4">
+                      <Label htmlFor="register-password">Password</Label>
+                      <Input
+                        id="register-password"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="Minimum 6 characters"
+                        minLength={6}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className={SIMPLE_INPUT_CLASS}
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <Label htmlFor="register-confirm">Confirm password</Label>
+                      <Input
+                        id="register-confirm"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="Repeat your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className={SIMPLE_INPUT_CLASS}
+                      />
+                    </div>
+                  </form>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Primary actions — above the separator */}
+          <div className="pb-4">
+            {step === 1 && (
+              <Button
+                type="submit"
+                form="register-step-1"
+                className="w-full"
+              >
+                Next
+              </Button>
+            )}
+
+            {step === 2 && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => goTo(1)}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  form="register-step-2"
+                  className="flex-1"
+                >
+                  Next
+                </Button>
               </div>
             )}
 
-            {/* Password */}
-            <div>
-              <label htmlFor="register-password" className="block text-sm font-semibold text-honey mb-2">
-                Password
-              </label>
-              <input
-                id="register-password"
-                type="password"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                className="input-field"
-                placeholder="Minimum 6 characters"
-                autoComplete="new-password"
-                minLength={6}
-                required
-              />
-            </div>
+            {step === 3 && (
+              <div className="space-y-3">
+                <Button
+                  type="submit"
+                  form="register-step-3"
+                  className="w-full"
+                >
+                  Next
+                </Button>
+                <div className="flex items-center justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => goTo(2)}
+                  >
+                    Back
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtp('')
+                    }}
+                    className="text-xs text-primary underline-offset-4 hover:underline"
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+            )}
 
-            {/* Confirm password */}
-            <div>
-              <label htmlFor="register-confirm" className="block text-sm font-semibold text-honey mb-2">
-                Confirm Password
-              </label>
-              <input
-                id="register-confirm"
-                type="password"
-                value={confirmPassword}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setConfirmPassword(e.target.value)
-                }
-                className="input-field"
-                placeholder="Repeat your password"
-                autoComplete="new-password"
-                required
-              />
-            </div>
+            {step === 4 && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => goTo(3)}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  form="register-step-4"
+                  className="flex-1"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating account…' : 'Create Account'}
-            </button>
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-honey/20 text-center">
-            <p className="text-cream/80 mb-3">Already have an account?</p>
-            <Link href="/login" className="btn-secondary w-full inline-block">
-              Sign In
-            </Link>
+            {step === 5 && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => goTo(4)}
+                  disabled={submitting}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  form="register-step-5"
+                  className="flex-1"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Creating account…' : 'Create account'}
+                </Button>
+              </div>
+            )}
           </div>
+
+          <Separator className="my-4" />
+
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link
+              href="/login"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
         </div>
 
-        <p className="text-center text-cream/60 text-xs">
-          HoneyChain is built for KVIC&apos;s Honey Mission. Your data is protected and shared
-          only within the cooperative network.
-        </p>
-      </div>
+        {/* Right — image side (hidden on small screens, form only) */}
+        <div className="relative hidden min-h-[560px] md:block">
+          <Image
+            src="/images/login.png"
+            alt="Beekeeper holding a honeycomb"
+            fill
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 0vw, 50vw"
+          />
+        </div>
+      </Card>
     </div>
   )
 }

@@ -45,7 +45,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins(),
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -428,10 +428,36 @@ def create_batch(
     Automatically writes a HARVEST block to the ledger.
     Returns batch_id and verify_url.
     """
-    # Verify hive belongs to user
-    hive = db.query(Hive).filter(Hive.id == request.hive_id, Hive.beekeeper_id == current_user.id).first()
-    if not hive:
-        raise HTTPException(status_code=404, detail="Hive not found")
+    # Resolve hive: tolerate missing/blank hive_id from older dashboard builds
+    # by falling back to the caller's hive instead of returning a bare 404.
+    raw_hive_id = (request.hive_id or "").strip() or None
+    hive = None
+    if raw_hive_id:
+        hive = db.query(Hive).filter(Hive.id == raw_hive_id, Hive.beekeeper_id == current_user.id).first()
+        if not hive:
+            # Distinguish "no such hive" from "someone else's hive" for debugging.
+            exists_anywhere = db.query(Hive).filter(Hive.id == raw_hive_id).first()
+            if exists_anywhere:
+                raise HTTPException(status_code=403, detail="Hive belongs to a different beekeeper")
+            raise HTTPException(status_code=404, detail=f"Hive not found: {raw_hive_id}")
+    else:
+        user_hives = db.query(Hive).filter(Hive.beekeeper_id == current_user.id).order_by(Hive.created_at).all()
+        if not user_hives:
+            raise HTTPException(status_code=404, detail="No hives found. Create a hive before harvesting a batch.")
+        if len(user_hives) > 1:
+            raise HTTPException(
+                status_code=422,
+                detail=f"hive_id is required when you own {len(user_hives)} hives. Pass the hive to harvest from.",
+            )
+        hive = user_hives[0]
+
+    # Validate remaining payload explicitly so failures are 422, not DB errors.
+    if not (request.honey_type or "").strip():
+        raise HTTPException(status_code=422, detail="honey_type is required")
+    if not (request.apiary_location or "").strip():
+        raise HTTPException(status_code=422, detail="apiary_location is required")
+    if request.quantity_kg is None or request.quantity_kg <= 0:
+        raise HTTPException(status_code=422, detail="quantity_kg must be greater than 0")
 
     # Analyze honey purity
     purity_result = ApicultureAnalytics.score_purity(moisture_pct=request.moisture_pct)
@@ -439,11 +465,11 @@ def create_batch(
     batch = Batch(
         id=str(uuid.uuid4()),
         beekeeper_id=current_user.id,
-        hive_id=request.hive_id,
-        honey_type=request.honey_type,
+        hive_id=hive.id,
+        honey_type=request.honey_type.strip(),
         quantity_kg=request.quantity_kg,
         harvest_date=datetime.utcnow(),
-        apiary_location=request.apiary_location,
+        apiary_location=request.apiary_location.strip(),
         moisture_pct=request.moisture_pct,
         purity_score=purity_result["purity_score"],
         status="HARVESTED",
@@ -485,7 +511,13 @@ def create_batch(
     db.commit()
 
     return {
+        # `id` + `hive_id` keep the dashboard list working when it appends
+        # this response directly; `batch_id` keeps older clients working.
+        "id": batch.id,
         "batch_id": batch.id,
+        "hive_id": batch.hive_id,
+        "honey_type": batch.honey_type,
+        "quantity_kg": batch.quantity_kg,
         "status": batch.status,
         "verify_url": f"/verify/{batch.id}",
         "purity_score": purity_result["purity_score"],

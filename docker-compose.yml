@@ -1,15 +1,23 @@
 services:
-  # PostgreSQL Database (optional - for production)
-  # postgres:
-  #   image: postgres:15-alpine
-  #   environment:
-  #     POSTGRES_USER: honeychain
-  #     POSTGRES_PASSWORD: honeychain_dev
-  #     POSTGRES_DB: honeychain
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: honeychain-postgres
+    environment:
+      POSTGRES_USER: honeychain
+      POSTGRES_PASSWORD: honeychain_dev
+      POSTGRES_DB: honeychain
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U honeychain -d honeychain"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - honeychain
 
   # FastAPI Backend
   backend:
@@ -19,7 +27,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./honey.db
+      - DATABASE_URL=postgresql://honeychain:honeychain_dev@postgres:5432/honeychain
       - SECRET_KEY=dev-secret-key-change-in-production
       - CORS_ORIGINS=http://localhost:3000,http://localhost:8000
       - FRONTEND_URL=http://localhost:3000
@@ -28,8 +36,10 @@ services:
       - ADMIN_INVITE_CODE=local-demo-admin-invite
     volumes:
       - ./backend:/app
-      - ./backend/honey.db:/app/honey.db
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - honeychain
 

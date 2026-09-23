@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "HoneyChain Mobile",
+    "slug": "honeychain-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "honeychain",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "androidStatusBar": {
+      "backgroundColor": "#00000000",
+      "barStyle": "light-content",
+      "translucent": true
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.honeychain.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#f25623",
+        "foregroundImage": "./assets/adaptive-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiUrl": "http://localhost:8000"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f25623",
+          "image": "./assets/splash.png",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#f25623"
+          },
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-localization",
+      "expo-router"
+    ]
+  }
+}

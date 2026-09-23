@@ -41,7 +41,7 @@ export default function Home() {
                 <Link href="/login" className="btn-ghost">
                   Login
                 </Link>
-                <Link href="/login?mode=register" className="btn-primary">
+                <Link href="/register" className="btn-primary">
                   Get Started
                 </Link>
               </>
@@ -81,7 +81,7 @@ export default function Home() {
             </ul>
 
             <div className="flex gap-4">
-              <Link href="/login?mode=register" className="btn-primary">
+              <Link href="/register" className="btn-primary">
                 Join as Beekeeper
               </Link>
             </div>
@@ -293,7 +293,7 @@ export default function Home() {
           </p>
 
           <div className="flex justify-center gap-4 flex-wrap">
-            <Link href="/login?mode=register" className="btn-primary">
+            <Link href="/register" className="btn-primary">
               Sign Up Now
             </Link>
             <Link href="/login" className="btn-secondary">
