@@ -10,6 +10,9 @@ import i18n, { initI18n } from './src/i18n';
 import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
 import OnboardingWelcomeScreen from './src/screens/OnboardingWelcomeScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import { ThemeProvider } from './providers/theme-provider';
+import { ToastProvider } from './components/ui/toast';
+import { setUnauthorizedHandler } from './src/api/client';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -42,22 +45,31 @@ export default function App() {
     }
   }, [i18nReady, fontsLoaded, fontError]);
 
+  useEffect(() => {
+    setUnauthorizedHandler(() => setStep('auth'));
+    return () => setUnauthorizedHandler();
+  }, []);
+
   if (!i18nReady || (!fontsLoaded && !fontError)) {
     return null;
   }
 
   return (
-    <SafeAreaProvider>
-      <I18nextProvider i18n={i18n}>
-        <StatusBar style="dark" />
-        {step === 'language' ? (
-          <LanguageSelectionScreen onGetStarted={() => setStep('auth')} />
-        ) : step === 'auth' ? (
-          <OnboardingWelcomeScreen onBack={() => setStep('language')} onAuthenticated={() => setStep('home')} />
-        ) : (
-          <HomeScreen />
-        )}
-      </I18nextProvider>
-    </SafeAreaProvider>
+    <ThemeProvider defaultMode="dark">
+      <SafeAreaProvider>
+        <ToastProvider>
+          <I18nextProvider i18n={i18n}>
+          <StatusBar style="light" />
+          {step === 'language' ? (
+            <LanguageSelectionScreen onGetStarted={() => setStep('auth')} />
+          ) : step === 'auth' ? (
+            <OnboardingWelcomeScreen onBack={() => setStep('language')} onAuthenticated={() => setStep('home')} />
+          ) : (
+            <HomeScreen onLogout={() => setStep('auth')} />
+          )}
+          </I18nextProvider>
+        </ToastProvider>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }

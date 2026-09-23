@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "honeychain",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "dark",
     "androidStatusBar": {
       "backgroundColor": "#00000000",
@@ -17,35 +17,43 @@
     },
     "android": {
       "package": "com.honeychain.mobile",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "backgroundColor": "#f25623",
-        "foregroundImage": "./assets/adaptive-icon-foreground.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/logo.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/logo.png"
     },
     "extra": {
-      "apiUrl": "http://localhost:8000"
+      "apiUrl": "http://3.109.3.187:8001"
     },
     "plugins": [
       "expo-font",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#f25623",
-          "image": "./assets/splash.png",
+          "backgroundColor": "#000000",
+          "image": "./assets/logo.png",
           "dark": {
-            "image": "./assets/splash.png",
-            "backgroundColor": "#f25623"
+            "image": "./assets/logo.png",
+            "backgroundColor": "#000000"
           },
           "imageWidth": 200,
           "resizeMode": "contain"
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow HoneyChain to use your location to save your apiary location."
+        }
+      ],
       "expo-localization",
-      "expo-router"
+      "expo-router",
+      "expo-sharing"
     ]
   }
 }
