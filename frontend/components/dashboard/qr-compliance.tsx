@@ -24,7 +24,7 @@ export function QrSection({ batchId }: { batchId: string }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `honeychain-${batchId}-qr.png`
+      a.download = `beelink-${batchId}-qr.png`
       document.body.appendChild(a)
       a.click()
       a.remove()

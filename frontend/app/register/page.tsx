@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useI18n } from '@/lib/i18n/context'
-import { LanguageSwitcher } from '@/components/language-switcher'
 
 const SIMPLE_INPUT_CLASS =
   'shadow-none outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input active:outline-none'
@@ -210,9 +209,19 @@ export default function RegisterPage() {
       <Card className="w-full max-w-4xl overflow-hidden p-0 grid grid-cols-1 md:grid-cols-2">
         {/* Left — form side */}
         <div className="flex min-h-[480px] flex-col p-6 sm:p-8 md:min-h-[560px]">
-          {/* Top row: progress disc + counter */}
+          {/* Top row: branding + progress disc + counter */}
           <div className="flex items-start justify-between">
-            <LanguageSwitcher />
+            <Link href="/" className="flex items-center gap-2" aria-label="Beelink home">
+              <Image
+                src="/logo.png"
+                alt="Beelink logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+                priority
+              />
+              <span className="text-xl font-semibold tracking-tight">Beelink</span>
+            </Link>
             <div
               className="flex shrink-0 items-center gap-2"
               aria-label={`${t.register.stepAria} ${step} ${t.register.of} ${TOTAL_STEPS}`}

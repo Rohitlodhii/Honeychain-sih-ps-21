@@ -1,10 +1,10 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
-  Hexagon,
   Package,
   BarChart3,
   Link2,
@@ -49,7 +49,7 @@ const NAV = [
 ] as const
 
 function initials(name?: string | null) {
-  if (!name) return "HC"
+  if (!name) return "BE"
   const parts = name.trim().split(/\s+/)
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
@@ -79,11 +79,15 @@ export function AppSidebar() {
     <Sidebar collapsible="offcanvas">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Hexagon className="h-5 w-5" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Beelink logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg object-cover"
+          />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold tracking-tight">HoneyChain</span>
+            <span className="text-sm font-semibold tracking-tight">Beelink</span>
             <span className="text-xs text-muted-foreground">{t.sidebar.console}</span>
           </div>
         </div>

@@ -1,8 +1,8 @@
 import { OfflineContent } from './offline-content'
 
 export const metadata = {
-  title: 'Offline — HoneyChain',
-  description: 'You are offline. HoneyChain will sync when connectivity returns.',
+  title: 'Offline — Beelink',
+  description: 'You are offline. Beelink will sync when connectivity returns.',
 }
 
 export default function OfflinePage() {

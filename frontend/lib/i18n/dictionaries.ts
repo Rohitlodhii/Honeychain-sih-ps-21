@@ -14,7 +14,7 @@ export const LOCALE_TAGS: Record<Locale, string> = {
 }
 
 export const DEFAULT_LOCALE: Locale = 'en'
-export const STORAGE_KEY = 'honeychain-locale'
+export const STORAGE_KEY = 'beelink-locale'
 
 export function isLocale(v: string): v is Locale {
   return v === 'en' || v === 'hi' || v === 'mr'
@@ -37,7 +37,7 @@ const en = {
     viewQrTitle: 'View QR',
     viewTimelineTitle: 'View timeline',
     verifyTitle: 'Verify',
-    brand: 'HoneyChain',
+    brand: 'Beelink',
   },
   home: {
     dashboard: 'Dashboard',
@@ -48,7 +48,7 @@ const en = {
     titleA: 'Know the story behind every',
     titleB: 'drop.',
     subtitle:
-      'HoneyChain makes every harvest traceable—from a thriving hive to the jar in your hand. Better insight for beekeepers, verifiable trust for buyers.',
+      'Beelink makes every harvest traceable—from a thriving hive to the jar in your hand. Better insight for beekeepers, verifiable trust for buyers.',
     startApiary: 'Start your apiary',
     howItWorks: 'How it works',
     checkQr: 'QR-powered traceability',
@@ -78,7 +78,7 @@ const en = {
     step3D: 'Customers see the authentic story, and growers earn the credit they deserve.',
     ctaTitle: 'Grow a more trusted honey business.',
     ctaSub: 'Set up your first hive, create your first batch, and let every jar tell its true story.',
-    ctaBtn: 'Join HoneyChain',
+    ctaBtn: 'Join Beelink',
     footerTag: 'From hive to home, with proof.',
   },
   login: {
@@ -335,7 +335,7 @@ const en = {
   traceability: {
     title: 'Traceability',
     subtitle: 'Blockchain-backed honey traceability, explained simply.',
-    howTitle: 'How HoneyChain traceability works',
+    howTitle: 'How Beelink traceability works',
     howDesc:
       'Every harvest, quality test, transfer, packaging and sale is written as a traceability event in a tamper-evident ledger. Consumers scan the QR code on the jar to verify the journey. You see a simple timeline — technical ledger details are available under an expandable section for advanced users.',
     loadFail: 'Unable to load traceability',
@@ -492,7 +492,7 @@ const en = {
     preparing: 'Preparing…',
     complianceDownloaded: 'Compliance report downloaded',
     complianceNote:
-      'HoneyChain Compliance Screening Report — a screening summary based on moisture and traceability records, not a laboratory certificate.',
+      'Beelink Compliance Screening Report — a screening summary based on moisture and traceability records, not a laboratory certificate.',
     downloadQrFail: 'Unable to download QR code',
   },
   verify: {
@@ -518,7 +518,7 @@ const en = {
     fName: 'Name',
     fCluster: 'Cluster',
     beekeeperNote:
-      'This beekeeper is part of the HoneyChain network and maintains traceability records for all honey.',
+      'This beekeeper is part of the Beelink network and maintains traceability records for all honey.',
     timelineTitle: 'Traceability Timeline',
     chainValidLbl: (valid: string, total: number) => `Chain verification: ${valid} • ${total} events`,
     validWord: 'valid',
@@ -567,12 +567,12 @@ const en = {
   },
   offline: {
     title: "You're offline",
-    desc: "HoneyChain works in low-connectivity areas. Your cached pages are available, and new harvests or readings will sync when you're back online.",
+    desc: "Beelink works in low-connectivity areas. Your cached pages are available, and new harvests or readings will sync when you're back online.",
     homeBtn: 'Try Home Again',
     dashBtn: 'Open Dashboard',
   },
   shell: {
-    breadcrumb: 'HoneyChain',
+    breadcrumb: 'Beelink',
   },
   validation: {
     required: (label: string) => `${label} is required`,
@@ -622,7 +622,7 @@ const hi: Dict = {
     viewQrTitle: 'QR देखें',
     viewTimelineTitle: 'टाइमलाइन देखें',
     verifyTitle: 'सत्यापित करें',
-    brand: 'HoneyChain',
+    brand: 'Beelink',
   },
   home: {
     dashboard: 'डैशबोर्ड',
@@ -633,7 +633,7 @@ const hi: Dict = {
     titleA: 'हर बूंद के पीछे की',
     titleB: 'कहानी जानें।',
     subtitle:
-      'HoneyChain हर फसल को ट्रेस करने योग्य बनाता है—समृद्ध छत्ते से आपके हाथ में मौजूद जार तक। मधुमक्खी पालकों के लिए बेहतर जानकारी, खरीदारों के लिए सत्यापित भरोसा।',
+      'Beelink हर फसल को ट्रेस करने योग्य बनाता है—समृद्ध छत्ते से आपके हाथ में मौजूद जार तक। मधुमक्खी पालकों के लिए बेहतर जानकारी, खरीदारों के लिए सत्यापित भरोसा।',
     startApiary: 'अपना मधुमक्खी फार्म शुरू करें',
     howItWorks: 'यह कैसे काम करता है',
     checkQr: 'QR-संचालित ट्रेसेबिलिटी',
@@ -663,7 +663,7 @@ const hi: Dict = {
     step3D: 'ग्राहक प्रामाणिक कहानी देखते हैं, और उत्पादकों को उनका श्रेय मिलता है।',
     ctaTitle: 'अधिक विश्वसनीय शहद व्यवसाय बढ़ाएं।',
     ctaSub: 'अपना पहला छत्ता स्थापित करें, पहला बैच बनाएं, और हर जार को सच्ची कहानी बताने दें।',
-    ctaBtn: 'HoneyChain से जुड़ें',
+    ctaBtn: 'Beelink से जुड़ें',
     footerTag: 'छत्ते से घर तक, प्रमाण के साथ।',
   },
   login: {
@@ -920,7 +920,7 @@ const hi: Dict = {
   traceability: {
     title: 'ट्रेसेबिलिटी',
     subtitle: 'ब्लॉकचेन-समर्थित शहद ट्रेसेबिलिटी, सरल भाषा में।',
-    howTitle: 'HoneyChain ट्रेसेबिलिटी कैसे काम करती है',
+    howTitle: 'Beelink ट्रेसेबिलिटी कैसे काम करती है',
     howDesc:
       'हर फसल, गुणवत्ता परीक्षण, स्थानांतरण, पैकेजिंग और बिक्री छेड़छाड़-रहित लेज़र में ट्रेसेबिलिटी इवेंट के रूप में लिखी जाती है। उपभोक्ता यात्रा सत्यापित करने के लिए जार पर QR कोड स्कैन करते हैं। आपको सरल टाइमलाइन दिखती है — उन्नत उपयोगकर्ताओं के लिए तकनीकी लेज़र विवरण विस्तार योग्य अनुभाग में उपलब्ध है।',
     loadFail: 'ट्रेसेबिलिटी लोड नहीं हो सकी',
@@ -1077,7 +1077,7 @@ const hi: Dict = {
     preparing: 'तैयार हो रही है…',
     complianceDownloaded: 'अनुपालन रिपोर्ट डाउनलोड हुई',
     complianceNote:
-      'HoneyChain अनुपालन जांच रिपोर्ट — नमी और ट्रेसेबिलिटी रिकॉर्ड पर आधारित जांच सारांश, प्रयोगशाला प्रमाणपत्र नहीं।',
+      'Beelink अनुपालन जांच रिपोर्ट — नमी और ट्रेसेबिलिटी रिकॉर्ड पर आधारित जांच सारांश, प्रयोगशाला प्रमाणपत्र नहीं।',
     downloadQrFail: 'QR कोड डाउनलोड नहीं हो सका',
   },
   verify: {
@@ -1103,7 +1103,7 @@ const hi: Dict = {
     fName: 'नाम',
     fCluster: 'क्लस्टर',
     beekeeperNote:
-      'यह मधुमक्खी पालक HoneyChain नेटवर्क का हिस्सा है और सभी शहद के ट्रेसेबिलिटी रिकॉर्ड रखता है।',
+      'यह मधुमक्खी पालक Beelink नेटवर्क का हिस्सा है और सभी शहद के ट्रेसेबिलिटी रिकॉर्ड रखता है।',
     timelineTitle: 'ट्रेसेबिलिटी टाइमलाइन',
     chainValidLbl: (valid: string, total: number) => `श्रृंखला सत्यापन: ${valid} • ${total} इवेंट`,
     validWord: 'मान्य',
@@ -1152,12 +1152,12 @@ const hi: Dict = {
   },
   offline: {
     title: 'आप ऑफ़लाइन हैं',
-    desc: 'HoneyChain कम कनेक्टिविटी वाले क्षेत्रों में काम करता है। आपके कैश्ड पृष्ठ उपलब्ध हैं, और नई फसल या रीडिंग ऑनलाइन वापस आने पर सिंक हो जाएंगी।',
+    desc: 'Beelink कम कनेक्टिविटी वाले क्षेत्रों में काम करता है। आपके कैश्ड पृष्ठ उपलब्ध हैं, और नई फसल या रीडिंग ऑनलाइन वापस आने पर सिंक हो जाएंगी।',
     homeBtn: 'होम पुनः प्रयास करें',
     dashBtn: 'डैशबोर्ड खोलें',
   },
   shell: {
-    breadcrumb: 'HoneyChain',
+    breadcrumb: 'Beelink',
   },
   validation: {
     required: (label: string) => `${label} आवश्यक है`,
@@ -1205,7 +1205,7 @@ const mr: Dict = {
     viewQrTitle: 'QR पहा',
     viewTimelineTitle: 'टाइमलाइन पहा',
     verifyTitle: 'पडताळणी करा',
-    brand: 'HoneyChain',
+    brand: 'Beelink',
   },
   home: {
     dashboard: 'डॅशबोर्ड',
@@ -1216,7 +1216,7 @@ const mr: Dict = {
     titleA: 'प्रत्येक थेंबामागची',
     titleB: 'गोष्ट जाणून घ्या.',
     subtitle:
-      'HoneyChain प्रत्येक काढणीचा मागोवा घेते—भरभराटीच्या पोळ्यापासून तुमच्या हातातील बरणीपर्यंत. मधमाशीपालकांसाठी चांगली माहिती, खरेदीदारांसाठी पडताळलेला विश्वास.',
+      'Beelink प्रत्येक काढणीचा मागोवा घेते—भरभराटीच्या पोळ्यापासून तुमच्या हातातील बरणीपर्यंत. मधमाशीपालकांसाठी चांगली माहिती, खरेदीदारांसाठी पडताळलेला विश्वास.',
     startApiary: 'तुमचे मधमाशी फार्म सुरू करा',
     howItWorks: 'हे कसे कार्य करते',
     checkQr: 'QR-आधारित मागोवा',
@@ -1246,7 +1246,7 @@ const mr: Dict = {
     step3D: 'ग्राहक अस्सल गोष्ट पाहतात आणि उत्पादकांना योग्य श्रेय मिळते.',
     ctaTitle: 'अधिक विश्वासार्ह मध व्यवसाय वाढवा.',
     ctaSub: 'तुमचे पहिले पोळे स्थापन करा, पहिला बॅच तयार करा आणि प्रत्येक बरणीला खरी गोष्ट सांगू द्या.',
-    ctaBtn: 'HoneyChain मध्ये सामील व्हा',
+    ctaBtn: 'Beelink मध्ये सामील व्हा',
     footerTag: 'पोळ्यापासून घरापर्यंत, पुराव्यासह.',
   },
   login: {
@@ -1503,7 +1503,7 @@ const mr: Dict = {
   traceability: {
     title: 'मागोवा',
     subtitle: 'ब्लॉकचेन-समर्थित मध मागोवा, सोप्या भाषेत.',
-    howTitle: 'HoneyChain मागोवा कसा कार्य करतो',
+    howTitle: 'Beelink मागोवा कसा कार्य करतो',
     howDesc:
       'प्रत्येक काढणी, गुणवत्ता चाचणी, हस्तांतरण, पॅकेजिंग आणि विक्री छेडछाड-रहित लेजरमध्ये मागोवा इव्हेंट म्हणून लिहिली जाते. ग्राहक प्रवास पडताळण्यासाठी बरणीवरील QR कोड स्कॅन करतात. तुम्हाला सोपी टाइमलाइन दिसते — प्रगत वापरकर्त्यांसाठी तांत्रिक लेजर तपशील विस्तारण्यायोग्य विभागात उपलब्ध आहे.',
     loadFail: 'मागोवा लोड करता आला नाही',
@@ -1660,7 +1660,7 @@ const mr: Dict = {
     preparing: 'तयार होत आहे…',
     complianceDownloaded: 'अनुपालन अहवाल डाउनलोड झाला',
     complianceNote:
-      'HoneyChain अनुपालन तपासणी अहवाल — ओलावा आणि मागोवा नोंदींवर आधारित तपासणी सारांश, प्रयोगशाळा प्रमाणपत्र नाही.',
+      'Beelink अनुपालन तपासणी अहवाल — ओलावा आणि मागोवा नोंदींवर आधारित तपासणी सारांश, प्रयोगशाळा प्रमाणपत्र नाही.',
     downloadQrFail: 'QR कोड डाउनलोड करता आला नाही',
   },
   verify: {
@@ -1686,7 +1686,7 @@ const mr: Dict = {
     fName: 'नाव',
     fCluster: 'क्लस्टर',
     beekeeperNote:
-      'हा मधमाशीपालक HoneyChain नेटवर्कचा भाग आहे आणि सर्व मधाचे मागोवा रेकॉर्ड ठेवतो.',
+      'हा मधमाशीपालक Beelink नेटवर्कचा भाग आहे आणि सर्व मधाचे मागोवा रेकॉर्ड ठेवतो.',
     timelineTitle: 'मागोवा टाइमलाइन',
     chainValidLbl: (valid: string, total: number) => `साखळी पडताळणी: ${valid} • ${total} इव्हेंट`,
     validWord: 'वैध',
@@ -1735,12 +1735,12 @@ const mr: Dict = {
   },
   offline: {
     title: 'तुम्ही ऑफलाइन आहात',
-    desc: 'HoneyChain कमी कनेक्टिव्हिटी असलेल्या भागात कार्य करते. तुमची कॅश केलेली पृष्ठे उपलब्ध आहेत आणि तुम्ही पुन्हा ऑनलाइन आल्यावर नवीन काढणी किंवा रीडिंग सिंक होतील.',
+    desc: 'Beelink कमी कनेक्टिव्हिटी असलेल्या भागात कार्य करते. तुमची कॅश केलेली पृष्ठे उपलब्ध आहेत आणि तुम्ही पुन्हा ऑनलाइन आल्यावर नवीन काढणी किंवा रीडिंग सिंक होतील.',
     homeBtn: 'होम पुन्हा प्रयत्न करा',
     dashBtn: 'डॅशबोर्ड उघडा',
   },
   shell: {
-    breadcrumb: 'HoneyChain',
+    breadcrumb: 'Beelink',
   },
   validation: {
     required: (label: string) => `${label} आवश्यक आहे`,

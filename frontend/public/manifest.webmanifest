@@ -1,6 +1,6 @@
 {
-  "name": "HoneyChain — Honey Traceability & Beekeeping",
-  "short_name": "HoneyChain",
+  "name": "Beelink — Honey Traceability & Beekeeping",
+  "short_name": "Beelink",
   "description": "Blockchain-based honey traceability with smart beekeeping management for KVIC.",
   "start_url": "/",
   "scope": "/",
@@ -12,6 +12,12 @@
   "categories": ["business", "productivity", "utilities"],
   "lang": "en",
   "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
@@ -40,7 +46,7 @@
     {
       "name": "Sign in",
       "url": "/login",
-      "description": "Sign in to HoneyChain"
+      "description": "Sign in to Beelink"
     }
   ]
 }

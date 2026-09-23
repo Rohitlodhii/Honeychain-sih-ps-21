@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { api } from "@/lib/api"
 import { normalizeError } from "@/lib/api/client"
@@ -61,7 +62,10 @@ export default function VerifyBatchIdPage({ params }: { params: { batchId: strin
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
       <div className="flex items-center justify-between gap-2">
-        <Link href="/" className="text-sm font-semibold">HoneyChain</Link>
+        <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
+          <Image src="/logo.png" alt="Beelink logo" width={24} height={24} className="h-6 w-6 rounded-full object-cover" />
+          Beelink
+        </Link>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">{t.verify.brandTag}</span>
           <LanguageSwitcher />

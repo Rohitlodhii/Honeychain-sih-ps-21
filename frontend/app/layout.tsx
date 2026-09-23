@@ -7,14 +7,14 @@ import { Toaster } from '@/components/ui/sonner'
 import { I18nProvider } from '@/lib/i18n/context'
 
 export const metadata: Metadata = {
-  title: 'HoneyChain - Honey Traceability & Beekeeping',
+  title: 'Beelink - Honey Traceability & Beekeeping',
   description: 'Blockchain-based honey traceability with smart beekeeping management for KVIC',
-  applicationName: 'HoneyChain',
+  applicationName: 'Beelink',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'HoneyChain',
+    title: 'Beelink',
   },
   formatDetection: {
     telephone: true,
@@ -24,11 +24,15 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/logo.png', sizes: 'any', type: 'image/png' },
       { url: '/favicon.ico' },
       { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
       { url: '/favicon-192.png', sizes: '192x192', type: 'image/png' },
     ],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    apple: [
+      { url: '/logo.png', sizes: 'any', type: 'image/png' },
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
 }
 

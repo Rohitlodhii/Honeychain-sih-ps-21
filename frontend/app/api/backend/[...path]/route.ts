@@ -1,5 +1,5 @@
 /**
- * Same-origin reverse proxy for the HoneyChain FastAPI backend.
+ * Same-origin reverse proxy for the Beelink FastAPI backend.
  *
  * Browser -> (https, same origin) /api/backend/... -> (http, server-side) EC2 backend.
  * The browser never contacts the EC2 http:// URL directly, so there is no

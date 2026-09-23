@@ -25,9 +25,12 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = React.useState<Locale>(DEFAULT_LOCALE)
 
   // Hydrate from localStorage on mount (avoids SSR mismatch).
+  // Falls back to the legacy 'honeychain-locale' key after the Beelink rebrand.
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY)
+      const saved =
+        localStorage.getItem(STORAGE_KEY) ??
+        localStorage.getItem('honeychain-locale')
       if (saved && isLocale(saved)) setLocaleState(saved)
     } catch {
       // storage unavailable — keep default

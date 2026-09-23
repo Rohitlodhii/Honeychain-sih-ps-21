@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
@@ -55,7 +56,7 @@ export default function Home() {
 
   return <main className="min-h-screen overflow-hidden bg-[#fffdf8] text-[#2f2719]">
     <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8">
-      <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight"><span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-400 text-amber-950"><Hexagon className="h-5 w-5 fill-amber-950 text-amber-950" /></span><span className="text-xl">HoneyChain</span></Link>
+      <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight"><Image src="/logo.png" alt="Beelink logo" width={36} height={36} className="h-9 w-9 rounded-xl object-cover" priority /><span className="text-xl">Beelink</span></Link>
       <div className="flex items-center gap-2 sm:gap-4"><LanguageSwitcher />{isAuthenticated ? <><Link href="/dashboard" className="hidden text-sm font-medium sm:block">{t.home.dashboard}</Link><button onClick={() => { localStorage.removeItem('token'); setIsAuthenticated(false) }} className="text-sm font-medium text-stone-600">{t.home.signOut}</button></> : <><Link href="/login" className="text-sm font-medium text-stone-600">{t.home.signIn}</Link><Link href="/register" className="rounded-full bg-[#332a1b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-800">{t.home.getStarted}</Link></>}</div>
     </nav>
 
@@ -79,6 +80,6 @@ export default function Home() {
 
     <section className="relative overflow-hidden px-5 py-24 text-center lg:px-8"><div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,#ffe4a6,transparent_43%)]" /><Sprout className="mx-auto h-10 w-10 text-amber-700" /><h2 className="mx-auto mt-5 max-w-2xl text-4xl font-semibold tracking-[-.045em] sm:text-5xl">{t.home.ctaTitle}</h2><p className="mx-auto mt-5 max-w-lg text-lg leading-8 text-stone-600">{t.home.ctaSub}</p><Link href="/register" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#332a1b] px-6 py-3.5 font-semibold text-white transition hover:bg-amber-800">{t.home.ctaBtn} <ArrowRight className="h-4 w-4" /></Link></section>
 
-    <footer className="border-t border-stone-200 px-5 py-7 text-sm text-stone-500 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:justify-between"><span className="font-medium text-stone-700">HoneyChain</span><span>{t.home.footerTag}</span></div></footer>
+    <footer className="border-t border-stone-200 px-5 py-7 text-sm text-stone-500 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:justify-between"><span className="font-medium text-stone-700">Beelink</span><span>{t.home.footerTag}</span></div></footer>
   </main>
 }

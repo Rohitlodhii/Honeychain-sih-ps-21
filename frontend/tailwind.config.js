@@ -18,7 +18,7 @@ module.exports = {
     },
     extend: {
       colors: {
-        // HoneyChain Brand Palette (custom)
+        // Beelink Brand Palette (custom)
         'espresso': '#171210',
         'surface': '#241B14',
         'honey': '#E3A530',
@@ -26,7 +26,7 @@ module.exports = {
         'cream': '#F3E9D2',
         'sage': '#7C9473',
         'brick': '#B4523A',
-        // shadcn tokens (CSS-variable driven, mapped to HoneyChain dark theme)
+        // shadcn tokens (CSS-variable driven, mapped to Beelink dark theme)
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
