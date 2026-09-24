@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   step: { color: '#A1A1AA', fontFamily: 'Geist_500Medium', fontSize: 14 },
   logo: { width: 34, height: 34 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 36, paddingBottom: 32 },
-  eyebrow: { color: '#A3C44A', fontFamily: 'Geist_700Bold', fontSize: 12, letterSpacing: 1.3 },
+  eyebrow: { color: '#F97316', fontFamily: 'Geist_700Bold', fontSize: 12, letterSpacing: 1.3 },
   title: { color: '#FFFFFF', fontFamily: 'Geist_700Bold', fontSize: 32, marginTop: 10 },
   subtitle: { color: '#A1A1AA', fontFamily: 'Geist_400Regular', fontSize: 16, lineHeight: 23, marginTop: 10 },
   loginLayout: { flex: 1 },

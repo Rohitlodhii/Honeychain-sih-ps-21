@@ -85,5 +85,5 @@ const styles = StyleSheet.create({
   button: { width: '100%', borderRadius: 14 },
   dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#52525B' },
-  activeDot: { width: 24, backgroundColor: '#A3C44A' },
+  activeDot: { width: 24, backgroundColor: '#F97316' },
 });
