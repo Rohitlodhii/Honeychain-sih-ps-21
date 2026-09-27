@@ -366,6 +366,9 @@ export default function RegisterPage() {
                           ))}
                         </InputOTPGroup>
                       </InputOTP>
+                      <p className="text-xs text-muted-foreground">
+                        {t.register.otpHint}
+                      </p>
                     </div>
                   </form>
                 )}
