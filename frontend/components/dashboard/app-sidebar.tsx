@@ -11,6 +11,8 @@ import {
   User,
   LogOut,
   ChevronUp,
+  PanelLeftClose,
+  PanelLeftOpen,
   Hexagon as HiveIcon,
 } from "lucide-react"
 import { useAuth } from "./auth-provider"
@@ -25,7 +27,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -55,6 +60,25 @@ function initials(name?: string | null) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+function SidebarCloseButton() {
+  const { open, toggleSidebar } = useSidebar()
+  const Icon = open ? PanelLeftClose : PanelLeftOpen
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="ml-auto h-7 w-7 shrink-0"
+      onClick={toggleSidebar}
+      title={open ? "Close sidebar" : "Open sidebar"}
+      aria-label={open ? "Close sidebar" : "Open sidebar"}
+      aria-expanded={open}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="sr-only">{open ? "Close sidebar" : "Open sidebar"}</span>
+    </Button>
+  )
+}
+
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -76,7 +100,7 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar collapsible="offcanvas">
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
           <Image
@@ -84,12 +108,13 @@ export function AppSidebar() {
             alt="Beelink logo"
             width={32}
             height={32}
-            className="h-8 w-8 rounded-lg object-cover"
+            className="h-8 w-8 shrink-0 rounded-lg object-cover"
           />
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-semibold tracking-tight">Beelink</span>
             <span className="text-xs text-muted-foreground">{t.sidebar.console}</span>
           </div>
+          <SidebarCloseButton />
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -180,6 +205,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

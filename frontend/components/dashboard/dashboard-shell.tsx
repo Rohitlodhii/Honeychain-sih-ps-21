@@ -1,13 +1,43 @@
 "use client"
 
 import * as React from "react"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { AuthProvider } from "./auth-provider"
 import { AppSidebar } from "./app-sidebar"
 import { AddHarvestButton } from "./add-harvest-button"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useI18n } from "@/lib/i18n/context"
+
+function SidebarOpenCloseButton() {
+  const { open, isMobile, openMobile } = useSidebar()
+  const isOpen = isMobile ? openMobile : open
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <SidebarTrigger
+          className="-ml-1"
+          title={isOpen ? "Close sidebar" : "Open sidebar"}
+          aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
+          aria-expanded={isOpen}
+        />
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="start">
+        {isOpen ? "Close sidebar (Ctrl+B)" : "Open sidebar (Ctrl+B)"}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
 
 function ShellHeader({
   children,
@@ -19,7 +49,7 @@ function ShellHeader({
   const { t } = useI18n()
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-      <SidebarTrigger className="-ml-1" />
+      <SidebarOpenCloseButton />
       <Separator orientation="vertical" className="mr-2 h-4" />
       <div className="flex min-w-0 flex-1 items-center gap-2 truncate text-sm text-muted-foreground">
         {breadcrumb ?? t.shell.breadcrumb}
